@@ -8,7 +8,7 @@ permissions:
   contents: write
 
 jobs:
-  release_build:
+  release_binary_build:
     runs-on: ubuntu-latest
 
     strategy:
@@ -59,3 +59,41 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ matrix.build_name }}
+
+  release_image_build:
+    runs-on: ubuntu-latest
+
+    # Ensure we have permissions to write to the package repo
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to container registry
+        uses: docker/login-action@v3.4.0
+        with:
+          registry: "ghcr.io"
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5.8.0
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=${{ github.ref_name }}
+            type=raw,value=latest
+
+      - name: Push image build
+        uses: docker/build-push-action@v6.18.0
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            DOCKER_IMAGE_VERSION=${{ github.ref_name }}
