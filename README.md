@@ -7,7 +7,7 @@ A Prometheus exporter for scraping metrics from pfSense firewalls using the [RES
 
 ## Installing
 
-The exporter is designed to run externally to your pfSense instances (although the FreeBSD build can run directly on pfSense). It can be installed on any system that can reach your pfSense instance(s). To install the pre-built binaries, download the latest release from the [releases page](https://github.com/jaredhendrickson13/pfsense_exporter/releases).
+The exporter is designed to run externally to your pfSense instances (although the FreeBSD build can run directly on pfSense). It can be installed on any system that can reach your pfSense instance(s). To install the pre-built binaries, download the latest release from the [releases page](https://github.com/pfrest/pfsense_exporter/releases).
 
 ## Configuration
 
