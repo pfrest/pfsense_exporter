@@ -78,3 +78,17 @@ scrape_configs:
       - source_labels: [__param_target]
         target_label: instance
 ```
+
+## Docker
+
+The exporter can also be run as a Docker container. To pull and run the Docker image, use the following command:
+
+```bash
+docker run \
+  -p 9945:9945 \
+  -v /path/to/config.yml:/pfsense_exporter/config.yml \
+  ghcr.io/pfrest/pfsense_exporter:latest
+```
+
+> [!IMPORTANT]
+> Be sure to change the `-p` argument to match the port specified in your exporter config and the`-v` argument to the correct path for your config file.
