@@ -7,13 +7,13 @@ A Prometheus exporter for scraping metrics from pfSense firewalls using the [RES
 
 ## Installing
 
-The exporter is designed to run externally to the pfSense firewall (although the FreeBSD build can run directly on pfSense). It can be installed on any system that can reach your pfSense instance(s). To install the pre-built binaries, download the latest release from the [releases page](https://github.com/jaredhendrickson13/pfsense_exporter/releases).
+The exporter is designed to run externally to your pfSense instances (although the FreeBSD build can run directly on pfSense). It can be installed on any system that can reach your pfSense instance(s). To install the pre-built binaries, download the latest release from the [releases page](https://github.com/jaredhendrickson13/pfsense_exporter/releases).
 
 ## Configuration
 
 Below are the configuration options available for the pfSense Exporter:
 
-## Top-Level Options
+### Top-Level Options
 
 | Option        | Type    | Default      | Description                                                                                |
 |---------------|---------|--------------|--------------------------------------------------------------------------------------------|
@@ -21,7 +21,7 @@ Below are the configuration options available for the pfSense Exporter:
 | `port`        | int     | `9945`       | The port the exporter will listen on. Must be between 1 and 65535.                         |
 | `targets`     | array   | —            | Configurations for pfSense targets to scrape. See [Target Options](#target-options) below. |
 
-## Target Options
+### Target Options
 
 Each item in the `targets` array has the following options:
 
@@ -39,3 +39,42 @@ Each item in the `targets` array has the following options:
 | `collectors`                | array   | —         | List of collectors to enable for this target. If empty, all collectors are enabled.           |
 | `max_collector_concurrency` | int     | `4`       | Maximum number of collectors allowed to run concurrently. Must be between 1 and 10.           |
 | `max_collector_buffer_size` | int     | `100`     | Maximum size of the collector's metric buffer. Must be at least 10. Large pfSense instances may need this value increased.                           |
+
+## Running the Exporter
+
+To run the exporter, execute the following command:
+
+```bash
+./pfsense_exporter --config /path/to/config.yml
+```
+
+## Scraping the Exporter
+
+Once your exporter is running, you will need to configure a job in your Prometheus server to scrape the metrics from the exporter. Here is an example configuration:
+
+```yaml
+scrape_configs:
+  - job_name: 'pfsense_exporter'
+    metrics_path: /metrics 
+
+    # List the pfSense targets you want Prometheus to scrape. Each target must also be defined in your exporter configuration file!
+    static_configs:
+      - targets:
+          - 'host1.example.com'
+          - 'host2.example.com'
+          - '192.168.1.50'
+
+    relabel_configs:
+      # This converts target to the '?target=' URL parameter.
+      - source_labels: [__address__]
+        target_label: __param_target
+
+      # This sets the actual scrape address to be your exporter's address.
+      - source_labels: [__param_target]
+        target_label: __address__
+        replacement: 'localhost:9945'  # <-- Your exporter's host and port
+
+      # Optional: This sets the 'instance' label to the original target address (your pfSense host)
+      - source_labels: [__param_target]
+        target_label: instance
+```
