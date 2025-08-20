@@ -9,7 +9,7 @@ ENV DOCKER_IMAGE_VERSION=${DOCKER_IMAGE_VERSION:-"v0.0.0-dev"}
 # Copy source code into the container and build the exporter
 COPY . .
 RUN go mod download
-RUN go build -o pfsense_exporter -ldflags="-X 'main.buildString=$DOCKER_IMAGE_VERSION'" ./cmd/pfsense_exporter
+RUN go build -o pfsense_exporter -ldflags="-X 'main.version=$DOCKER_IMAGE_VERSION'" ./cmd/pfsense_exporter
 
 # Setup the final container on Alpine Linux
 FROM alpine:latest
