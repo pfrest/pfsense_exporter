@@ -1,5 +1,5 @@
 # Set up the build environment
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 WORKDIR /app
 
 # Allow the build version to be set at build time
