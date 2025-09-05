@@ -1,5 +1,8 @@
 # pfSense Exporter
 
+[![Quality](https://github.com/pfrest/pfsense_exporter/actions/workflows/check_quality.yml/badge.svg?branch=main)](https://github.com/pfrest/pfsense_exporter/actions/workflows/check_quality.yml)
+[![Release](https://github.com/pfrest/pfsense_exporter/actions/workflows/release.yml/badge.svg)](https://github.com/pfrest/pfsense_exporter/actions/workflows/release.yml)
+
 A Prometheus exporter for scraping metrics from pfSense firewalls using the [REST API](https://github.com/jaredhendrickson13/pfsense-api) package. This exporter collects pfSense-specific metrics that are not available to the usual node-exporter on pfSense. A full list of available metrics can be found [here](docs/METRICS.md).
 
 > [!IMPORTANT]
