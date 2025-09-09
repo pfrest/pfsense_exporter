@@ -1,0 +1,44 @@
+# Below is an example Prometheus configuration file that includes a job for scraping metrics from te pfsense_exporter.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: 'pfsense_exporter'
+    metrics_path: /metrics
+
+    # IMPORTANT: Set the scrape interval to a value that makes sense for your environment.
+    # pfSense instances with large configuration sets may take longer to respond or may
+    # utilize more resources. A longer interval can help avoid overloading the target.
+    scrape_interval: 15s
+
+    # List the pfSense targets you want Prometheus to scrape. Please note these targets
+    # MUST exactly match the target as its defined in the exporter configuration.
+    static_configs:
+      - targets:
+          - 'pfsense1.example.com''
+          - 'pfsense2.example.com'
+
+    relabel_configs:
+      # This rule takes the target address (e.g., 'pfsense1.example.com') and copies it
+      # into a temporary internal label called '__param_target'.
+      - source_labels: [__address__]
+        target_label: __param_target
+
+      # This is the key step. It replaces the scrape address with the actual exporter's
+      # address. Prometheus will now scrape 'localhost:9945' but will pass the
+      # original target as a URL parameter (e.g., http://localhost:9945/metrics?target=host1.example.com).
+      - source_labels: [__param_target]
+        target_label: __address__
+        replacement: 'pfsense_exporter:9945'  # <-- Your exporter's host and port
+
+      # This final rule takes the original target address and sets it as the 'instance' label
+      # for the scraped metrics. This ensures your metrics are correctly identified
+      # by the pfSense host, not the exporter's address. This is optional as the exporter
+      # includes a 'host' label that serves a similar purpose.
+      - source_labels: [__param_target]
+        target_label: instance

@@ -1,0 +1,23 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.config.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - "9090:9090"
+
+  pfsense_exporter:
+    image: ghcr.io/pfrest/pfsense_exporter:latest
+    container_name: pfsense_exporter
+    restart: unless-stopped
+    volumes:
+      - ./exporter.config.yml:/pfsense_exporter/config.yml
+    ports:
+      - "9945:9945"
