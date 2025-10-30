@@ -12,7 +12,22 @@ on:
     branches:
       - master
 
-jobs:  
+jobs:
+  check_helm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Make sure the actual branch is checked out when running on pull requests
+          ref: ${{ github.head_ref }}
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+
+      - name: Lint Helm charts
+        run: helm lint charts/pfsense-exporter
+
   check_gofmt:
     runs-on: ubuntu-latest
     strategy:
