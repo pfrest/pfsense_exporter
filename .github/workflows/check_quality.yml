@@ -23,6 +23,8 @@ jobs:
           ref: ${{ github.head_ref }}
 
       - name: Set up Helm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         uses: azure/setup-helm@v3
 
       - name: Lint Helm charts
