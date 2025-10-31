@@ -1,0 +1,79 @@
+# Default values for pfsense-exporter.
+replicaCount: 1
+
+# Pull the image from the container registry
+image:
+  repository: ghcr.io/pfrest/pfsense_exporter
+  pullPolicy: IfNotPresent
+  tag: "" # Use the chart appVersion by default
+
+imagePullSecrets: []
+
+config:
+  address: "0.0.0.0"
+  port: 9945
+  targets: []
+
+# Don't specify name overrides by default
+nameOverride: ""
+fullnameOverride: ""
+
+# Creates a ServiceMonitor resource for the Prometheus Operator
+serviceMonitor:
+  enabled: false
+  path: /metrics
+  interval: 30s
+
+# This is for setting Kubernetes Annotations to a Pod.
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+service:
+  portName: http-metrics
+  type: ClusterIP
+
+# This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
+serviceAccount:
+  create: false
+
+# This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
+ingress:
+  enabled: false
+
+# -- Expose the service via gateway-api HTTPRoute
+# Requires Gateway API resources and suitable controller installed within the cluster
+# (see: https://gateway-api.sigs.k8s.io/guides/)
+httpRoute:
+  enabled: false
+
+# This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+livenessProbe:
+  tcpSocket:
+readinessProbe:
+  tcpSocket:
+
+# Set resource limits for containers
+resources: {}
+
+volumes: []
+
+volumeMounts: []
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

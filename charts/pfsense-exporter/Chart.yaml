@@ -1,0 +1,7 @@
+apiVersion: v2
+name: pfsense-exporter
+description: A Helm chart for the pfSense Exporter by pfREST
+type: application
+icon: https://github.com/pfrest.png
+version: "0.0.0" # This is a placeholder. Overridden during release workflow.
+appVersion: "0.0.0" # This is a placeholder. Overridden during release workflow.
