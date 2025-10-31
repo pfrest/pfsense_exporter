@@ -10,7 +10,7 @@ on:
   # Run whenever a pull request is opened with master as the target
   pull_request:
     branches:
-      - master
+      - main
 
 jobs:
   check_helm:
