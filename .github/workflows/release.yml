@@ -115,8 +115,10 @@ jobs:
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
       - name: Package Helm chart
-        run: helm package charts/pfsense-exporter --version ${{ steps.get_version.outputs.VERSION }} --app-version ${{ steps.get_version.outputs.VERSION }}
-
+        run: |
+          mkdir -p .cr-release-packages
+          helm package charts/pfsense-exporter --version ${{ steps.get_version.outputs.VERSION }} --app-version ${{ steps.get_version.outputs.VERSION }} -d .cr-release-packages
+          
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@cae68fefc6b5f367a0275617c9f83181ba54714f # v1.7.0
         env:
