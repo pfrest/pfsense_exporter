@@ -95,3 +95,16 @@ docker run \
 
 > [!IMPORTANT]
 > Be sure to change the `-p` argument to match the port specified in your exporter config and the`-v` argument to the correct path for your config file.
+
+## Helm
+
+A Helm chart is available for deploying the pfSense Exporter to a Kubernetes cluster. To install the chart, add the pfSense Exporter Helm repository and install the chart with your desired configuration:
+
+```bash
+helm repo add pfsense-exporter https://pfsense-exporter.pfrest.org/
+helm install my-pfsense-exporter pfsense-exporter/pfsense-exporter --values /path/to/values.yaml
+```
+
+> [!IMPORTANT]
+> Your `values.yaml` file should at least contain the necessary [configuration](#configuration) for the exporter.
+> Configuration options should be defined under the `config` key in your `values.yaml` file.
