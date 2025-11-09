@@ -137,7 +137,7 @@ jobs:
           git stash pop
 
           # Update Helm repo index and remove the chart file
-          helm repo index . --merge index.yaml --url https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.VERSION }}/
+          helm repo index . --merge index.yaml --url https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/
           git rm pfsense-exporter-${{ steps.get_version.outputs.VERSION }}.tgz -f
 
           # Commit and push the updated index
