@@ -133,7 +133,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
           # Stash the new chart for now so we can switch branches and update the index
-          git stash push -m -u "release_helm_chart" pfsense-exporter-${{ steps.get_version.outputs.VERSION }}.tgz
+          git stash push -u -m "release_helm_chart" pfsense-exporter-${{ steps.get_version.outputs.VERSION }}.tgz
           git fetch origin gh-pages
           git checkout gh-pages
           git stash pop
