@@ -1,47 +1,5 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_PROMETHEUS",
-      "label": "prometheus",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
   "__elements": {},
-  "__requires": [
-    {
-      "type": "panel",
-      "id": "gauge",
-      "name": "Gauge",
-      "version": ""
-    },
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "12.2.1"
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "stat",
-      "name": "Stat",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "timeseries",
-      "name": "Time series",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -59,7 +17,7 @@
     ]
   },
   "description": "Displays visualizations for system metrics.",
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "links": [],
@@ -67,7 +25,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Displays the system's current temperature in Celsius. Note not all systems support temperature readings.",
       "fieldConfig": {
@@ -136,13 +94,13 @@
       "targets": [
         {
           "editorMode": "builder",
-          "expr": "pfsense_system_temperature_celsius{host=~\"$host\"}",
+          "expr": "pfsense_system_temperature_celsius{instance=~\"$instance\", job=~\"$job\", host=~\"$host\"}",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           }
         }
       ],
@@ -153,7 +111,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Displays the percentage of CPU currently utilized by the system. Please note the algorithm used to determine this number is not 100% accurate. It is recommended to use values from the node-exporter instead.",
       "fieldConfig": {
@@ -212,10 +170,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "editorMode": "code",
-          "expr": "pfsense_system_cpu_usage_ratio{host=~\"$host\"}",
+          "expr": "pfsense_system_cpu_usage_ratio{instance=~\"$instance\", job=~\"$job\", host=~\"$host\"}",
           "legendFormat": "{{host }}",
           "range": true,
           "refId": "A"
@@ -227,7 +185,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Displays the percentage of CPU usage over time. Please note the algorithm used to determine this number is not 100% accurate. It is recommended to use values from the node-exporter instead.",
       "fieldConfig": {
@@ -317,13 +275,13 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "pfsense_system_cpu_usage_ratio{host=~\"$host\"}",
+          "expr": "pfsense_system_cpu_usage_ratio{instance=~\"$instance\", job=~\"$job\", host=~\"$host\"}",
           "legendFormat": "{{ host }}",
           "range": true,
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           }
         }
       ],
@@ -333,7 +291,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Displays the percentage of memory currently utilized by the system.",
       "fieldConfig": {
@@ -392,10 +350,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "editorMode": "code",
-          "expr": "pfsense_system_memory_usage_ratio{host=~\"$host\"}",
+          "expr": "pfsense_system_memory_usage_ratio{instance=~\"$instance\", job=~\"$job\", host=~\"$host\"}",
           "legendFormat": "{{host }}",
           "range": true,
           "refId": "A"
@@ -407,7 +365,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Displays the percentage of memory usage over time.",
       "fieldConfig": {
@@ -497,13 +455,13 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "pfsense_system_memory_usage_ratio{host=~\"$host\"}",
+          "expr": "pfsense_system_memory_usage_ratio{instance=~\"$instance\", job=~\"$job\", host=~\"$host\"}",
           "legendFormat": "{{ host }}",
           "range": true,
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           }
         }
       ],
@@ -513,7 +471,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Displays the system's current disk utilization as a percentage.",
       "fieldConfig": {
@@ -572,10 +530,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "editorMode": "code",
-          "expr": "pfsense_system_disk_usage_ratio{host=~\"$host\"}",
+          "expr": "pfsense_system_disk_usage_ratio{instance=~\"$instance\", job=~\"$job\", host=~\"$host\"}",
           "legendFormat": "{{host }}",
           "range": true,
           "refId": "A"
@@ -587,7 +545,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Displays the percentage of disk usage over time.",
       "fieldConfig": {
@@ -677,13 +635,13 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "pfsense_system_disk_usage_ratio{host=~\"$host\"}",
+          "expr": "pfsense_system_disk_usage_ratio{instance=~\"$instance\", job=~\"$job\", host=~\"$host\"}",
           "legendFormat": "{{ host }}",
           "range": true,
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           }
         }
       ],
@@ -693,7 +651,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Displays the system's current MBUF utilization as a percentage.",
       "fieldConfig": {
@@ -752,10 +710,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "editorMode": "code",
-          "expr": "pfsense_system_mbuf_usage_ratio{host=~\"$host\"}",
+          "expr": "pfsense_system_mbuf_usage_ratio{instance=~\"$instance\", job=~\"$job\", host=~\"$host\"}",
           "legendFormat": "{{host }}",
           "range": true,
           "refId": "A"
@@ -767,7 +725,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Displays the percentage of MBUF usage over time.",
       "fieldConfig": {
@@ -857,13 +815,13 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "pfsense_system_mbuf_usage_ratio{host=~\"$host\"}",
+          "expr": "pfsense_system_mbuf_usage_ratio{instance=~\"$instance\", job=~\"$job\", host=~\"$host\"}",
           "legendFormat": "{{ host }}",
           "range": true,
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           }
         }
       ],
@@ -873,7 +831,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Displays the system's current SWAP utilization as a percentage.",
       "fieldConfig": {
@@ -932,10 +890,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "editorMode": "code",
-          "expr": "pfsense_system_swap_usage_ratio{host=~\"$host\"}",
+          "expr": "pfsense_system_swap_usage_ratio{instance=~\"$instance\", job=~\"$job\", host=~\"$host\"}",
           "legendFormat": "{{host }}",
           "range": true,
           "refId": "A"
@@ -947,7 +905,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Displays the percentage of SWAP usage over time.",
       "fieldConfig": {
@@ -1037,13 +995,13 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "pfsense_system_swap_usage_ratio{host=~\"$host\"}",
+          "expr": "pfsense_system_swap_usage_ratio{instance=~\"$instance\", job=~\"$job\", host=~\"$host\"}",
           "legendFormat": "{{ host }}",
           "range": true,
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           }
         }
       ],
@@ -1061,6 +1019,50 @@
   "templating": {
     "list": [
       {
+        "name": "datasource",
+        "label": "Data source",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {
+          "text": "Prometheus",
+          "value": "Prometheus",
+          "selected": true
+        },
+        "hide": 2
+      },
+      {
+        "name": "job",
+        "label": "Job",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$datasource"
+        },
+        "query": {
+          "query": "label_values(up, job)",
+          "refId": "Prometheus-job"
+        },
+        "refresh": 2,
+        "allValue": ".+",
+        "includeAll": true,
+        "multi": true,
+        "hide": 0
+      },
+      {
+        "name": "instance",
+        "label": "Instance",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "$datasource" },
+        "query": {
+          "query": "label_values(up{job=~\"$job\"}, instance)",
+          "refId": "Prometheus-instance"
+        },
+        "refresh": 2,
+        "allValue": ".+",
+        "includeAll": true,
+        "multi": true
+      },
+      {
         "allValue": "",
         "current": {},
         "definition": "label_values(pfsense_system_memory_usage_ratio,host)",
@@ -1075,7 +1077,7 @@
           "query": "label_values(pfsense_system_memory_usage_ratio,host)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "sort": 1,
         "type": "query"
