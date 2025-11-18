@@ -610,7 +610,7 @@
         "allValue": "",
         "current": {},
         "definition": "label_values(pfsense_gateway_up,host)",
-        "description": "The pfSense host to whose data should be visualized.",
+        "description": "The pfSense host whose data should be visualized.",
         "includeAll": true,
         "label": "Host",
         "multi": true,
