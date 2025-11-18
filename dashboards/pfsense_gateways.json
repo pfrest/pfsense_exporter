@@ -93,6 +93,7 @@
         }
       ],
       "title": "Gateway Status",
+      "description": "Displays the current status of gateways.",
       "transparent": true,
       "type": "gauge"
     },
