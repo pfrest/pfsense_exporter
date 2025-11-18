@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: "pfSense Dashboards"
+    folder: "pfSense"
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
