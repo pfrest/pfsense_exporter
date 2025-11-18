@@ -108,3 +108,7 @@ helm install my-pfsense-exporter pfsense-exporter/pfsense-exporter --values /pat
 > [!IMPORTANT]
 > Your `values.yaml` file should at least contain the necessary [configuration](#configuration) for the exporter.
 > Configuration options should be defined under the `config` key in your `values.yaml` file.
+
+## Grafana
+
+Some basic Grafana dashboards are available for visualizing various pfSense metrics collected by the exporter. You can find them in the [dashboards directory](dashboards/). You can either manually import the JSON files into your existing Grafana instance, or you can take advantage of [Grafana's auto-provisioning](https://grafana.com/tutorials/provision-dashboards-and-data-sources/) features to provision the dashboards and data sources automatically. Examples of provisioning configurations can be found [here](/examples/grafana/).
