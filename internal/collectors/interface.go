@@ -214,7 +214,7 @@ func (c *InterfaceCollector) CollectWithTarget(ch chan<- prometheus.Metric, targ
 	c.interfaceOutPktsPassCount.Collect(ch)
 }
 
-// // resetMetrics resets all metrics in the collector.
+// resetMetrics resets all metrics in the collector.
 func (c *InterfaceCollector) resetMetrics() {
 	c.interfaceUp.Reset()
 	c.interfaceInErrsCount.Reset()

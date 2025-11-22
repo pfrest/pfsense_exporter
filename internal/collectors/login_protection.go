@@ -94,4 +94,5 @@ func (c *LoginProtectionCollector) CollectWithTarget(ch chan<- prometheus.Metric
 // resetMetrics resets all metrics in the collector.
 func (c *LoginProtectionCollector) resetMetrics() {
 	c.loginProtectionBlockedIP.Reset()
+	c.loginProtectionBlockedIPCount.Reset()
 }
