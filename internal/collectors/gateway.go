@@ -105,6 +105,7 @@ func (c *GatewayCollector) CollectWithTarget(ch chan<- prometheus.Metric, target
 	c.gatewayLossRatio.Reset()
 	c.gatewayDelaySeconds.Reset()
 	c.gatewayStdDevSeconds.Reset()
+	c.gatewayUp.Reset()
 	for _, gw := range gateways {
 		// Update the metrics
 		c.gatewayLossRatio.WithLabelValues(target.Host, gw.Name, gw.SourceIP, gw.MonitorIP).Set(float64(gw.Loss / 100.0))        // Convert percentage to ratio
