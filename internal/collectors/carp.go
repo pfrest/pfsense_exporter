@@ -95,6 +95,9 @@ func (c *CARPCollector) CollectWithTarget(ch chan<- prometheus.Metric, target *u
 		return
 	}
 
+	// Reset old metrics before collecting new data
+	c.resetMetrics()
+
 	// Update the system CARP metrics
 	c.carpEnabled.WithLabelValues(target.Host).Set(float64(utils.BoolToFloat64(stats.Enabled)))
 	c.carpMaintenanceModeEnabled.WithLabelValues(target.Host).Set(float64(utils.BoolToFloat64(stats.MaintenanceMode)))
@@ -116,9 +119,6 @@ func (c *CARPCollector) CollectWithTarget(ch chan<- prometheus.Metric, target *u
 		log.Error("carp", "failed to unmarshal virtual IP response from host %s: %s", target.Host, err.Error())
 		return
 	}
-
-	// Reset old metrics before collecting new data
-	c.resetMetrics()
 
 	// Extract metrics for each virtual IP identified
 	for _, ip := range virtualIPs {
