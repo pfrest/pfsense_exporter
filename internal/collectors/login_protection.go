@@ -77,8 +77,10 @@ func (c *LoginProtectionCollector) CollectWithTarget(ch chan<- prometheus.Metric
 		return
 	}
 
+	// Reset metrics before collecting new data
+	c.resetMetrics()
+
 	// Update the metrics
-	c.loginProtectionBlockedIP.Reset()
 	for _, entry := range stats.Entries {
 		c.loginProtectionBlockedIP.WithLabelValues(target.Host, entry).Set(1)
 	}
@@ -87,4 +89,9 @@ func (c *LoginProtectionCollector) CollectWithTarget(ch chan<- prometheus.Metric
 	// Collect the metrics
 	c.loginProtectionBlockedIP.Collect(ch)
 	c.loginProtectionBlockedIPCount.Collect(ch)
+}
+
+// resetMetrics resets all metrics in the collector.
+func (c *LoginProtectionCollector) resetMetrics() {
+	c.loginProtectionBlockedIP.Reset()
 }

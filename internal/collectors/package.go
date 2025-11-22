@@ -71,8 +71,10 @@ func (c *PackageCollector) CollectWithTarget(ch chan<- prometheus.Metric, target
 		return
 	}
 
+	// Reset metrics before collecting new data
+	c.resetMetrics()
+
 	// Extract metrics for each package identified
-	c.updateAvailable.Reset()
 	for _, pkg := range packages {
 		// Update the metrics
 		c.updateAvailable.WithLabelValues(target.Host, pkg.Name, pkg.Shortname, pkg.InstalledVersion, pkg.LatestVersion).Set(float64(utils.BoolToFloat64(pkg.UpdateAvailable)))
@@ -80,4 +82,9 @@ func (c *PackageCollector) CollectWithTarget(ch chan<- prometheus.Metric, target
 
 	// Collect the metrics
 	c.updateAvailable.Collect(ch)
+}
+
+// resetMetrics resets all metrics in the collector.
+func (c *PackageCollector) resetMetrics() {
+	c.updateAvailable.Reset()
 }

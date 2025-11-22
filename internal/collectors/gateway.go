@@ -101,11 +101,10 @@ func (c *GatewayCollector) CollectWithTarget(ch chan<- prometheus.Metric, target
 		return
 	}
 
+	// Reset metrics before collecting new data
+	c.resetMetrics()
+
 	// Extract metrics for each gateway identified
-	c.gatewayLossRatio.Reset()
-	c.gatewayDelaySeconds.Reset()
-	c.gatewayStdDevSeconds.Reset()
-	c.gatewayUp.Reset()
 	for _, gw := range gateways {
 		// Update the metrics
 		c.gatewayLossRatio.WithLabelValues(target.Host, gw.Name, gw.SourceIP, gw.MonitorIP).Set(float64(gw.Loss / 100.0))        // Convert percentage to ratio
@@ -119,6 +118,14 @@ func (c *GatewayCollector) CollectWithTarget(ch chan<- prometheus.Metric, target
 	c.gatewayDelaySeconds.Collect(ch)
 	c.gatewayStdDevSeconds.Collect(ch)
 	c.gatewayUp.Collect(ch)
+}
+
+// resetMetrics resets all metrics in the collector.
+func (c *GatewayCollector) resetMetrics() {
+	c.gatewayLossRatio.Reset()
+	c.gatewayDelaySeconds.Reset()
+	c.gatewayStdDevSeconds.Reset()
+	c.gatewayUp.Reset()
 }
 
 // gatewayUpToFloat64 converts the gateway status string to a float64 for Prometheus metrics.

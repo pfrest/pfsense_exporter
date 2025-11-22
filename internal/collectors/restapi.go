@@ -70,9 +70,17 @@ func (c *RESTAPICollector) CollectWithTarget(ch chan<- prometheus.Metric, target
 		return
 	}
 
+	// Reset metrics before collecting new data
+	c.resetMetrics()
+
 	// Update the metrics
 	c.restAPIUpdateAvailable.WithLabelValues(target.Host, stats.CurrentVersion, stats.LatestVersion, stats.LatestVersionReleaseDate).Set(utils.BoolToFloat64(stats.UpdateAvailable))
 
 	// Collect the metrics
 	c.restAPIUpdateAvailable.Collect(ch)
+}
+
+// resetMetrics resets all metrics in the collector.
+func (c *RESTAPICollector) resetMetrics() {
+	c.restAPIUpdateAvailable.Reset()
 }
