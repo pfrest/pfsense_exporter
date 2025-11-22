@@ -179,19 +179,10 @@ func (c *InterfaceCollector) CollectWithTarget(ch chan<- prometheus.Metric, targ
 		return
 	}
 
+	// Reset metrics before collecting new data
+	c.resetMetrics()
+
 	// Extract metrics for each interface identified
-	c.interfaceUp.Reset()
-	c.interfaceInErrsCount.Reset()
-	c.interfaceOutErrsCount.Reset()
-	c.interfaceCollisionsCount.Reset()
-	c.interfaceInBytesCount.Reset()
-	c.interfaceInBytesPassCount.Reset()
-	c.interfaceOutBytesCount.Reset()
-	c.interfaceOutBytesPassCount.Reset()
-	c.interfaceInPktsCount.Reset()
-	c.interfaceInPktsPassCount.Reset()
-	c.interfaceOutPktsCount.Reset()
-	c.interfaceOutPktsPassCount.Reset()
 	for _, iface := range interfaces {
 		// Update the metrics
 		c.interfaceUp.WithLabelValues(target.Host, iface.Name, iface.Descr, iface.Hwif, iface.Status).Set(interfaceStatusToFloat64(iface.Status))
@@ -221,6 +212,22 @@ func (c *InterfaceCollector) CollectWithTarget(ch chan<- prometheus.Metric, targ
 	c.interfaceInPktsPassCount.Collect(ch)
 	c.interfaceOutPktsCount.Collect(ch)
 	c.interfaceOutPktsPassCount.Collect(ch)
+}
+
+// resetMetrics resets all metrics in the collector.
+func (c *InterfaceCollector) resetMetrics() {
+	c.interfaceUp.Reset()
+	c.interfaceInErrsCount.Reset()
+	c.interfaceOutErrsCount.Reset()
+	c.interfaceCollisionsCount.Reset()
+	c.interfaceInBytesCount.Reset()
+	c.interfaceInBytesPassCount.Reset()
+	c.interfaceOutBytesCount.Reset()
+	c.interfaceOutBytesPassCount.Reset()
+	c.interfaceInPktsCount.Reset()
+	c.interfaceInPktsPassCount.Reset()
+	c.interfaceOutPktsCount.Reset()
+	c.interfaceOutPktsPassCount.Reset()
 }
 
 // statusToFloat64 converts the interface status string to a float64 for Prometheus metrics.

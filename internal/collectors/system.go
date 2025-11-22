@@ -127,6 +127,9 @@ func (c *SystemCollector) CollectWithTarget(ch chan<- prometheus.Metric, target 
 		return
 	}
 
+	// Reset metrics before collecting new data
+	c.resetMetrics()
+
 	// Update the metrics
 	c.systemTemperatureCelsius.WithLabelValues(target.Host).Set(float64(stats.TempC))
 	c.systemCPUCount.WithLabelValues(target.Host).Set(float64(stats.CPUCount))
@@ -144,4 +147,15 @@ func (c *SystemCollector) CollectWithTarget(ch chan<- prometheus.Metric, target 
 	c.systemMemoryUsage.Collect(ch)
 	c.systemSwapUsage.Collect(ch)
 	c.systemMbufUsage.Collect(ch)
+}
+
+// resetMetrics resets all metrics in the collector.
+func (c *SystemCollector) resetMetrics() {
+	c.systemTemperatureCelsius.Reset()
+	c.systemCPUCount.Reset()
+	c.systemCPUUsage.Reset()
+	c.systemDiskUsage.Reset()
+	c.systemMemoryUsage.Reset()
+	c.systemSwapUsage.Reset()
+	c.systemMbufUsage.Reset()
 }

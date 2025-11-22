@@ -92,6 +92,9 @@ func (c *FirewallStatesCollector) CollectWithTarget(ch chan<- prometheus.Metric,
 		stats.MaximumStates = stats.DefaultMaximumStates
 	}
 
+	// Reset metrics before collecting new data
+	c.resetMetrics()
+
 	// Update the metrics
 	c.firewallStatesMaximumCount.WithLabelValues(target.Host).Set(float64(stats.MaximumStates))
 	c.firewallStatesCurrentCount.WithLabelValues(target.Host).Set(float64(stats.CurrentStates))
@@ -101,4 +104,11 @@ func (c *FirewallStatesCollector) CollectWithTarget(ch chan<- prometheus.Metric,
 	c.firewallStatesCurrentCount.Collect(ch)
 	c.firewallStatesMaximumCount.Collect(ch)
 	c.firewallStatesUsageRatio.Collect(ch)
+}
+
+// resetMetrics resets all metrics in the collector.
+func (c *FirewallStatesCollector) resetMetrics() {
+	c.firewallStatesCurrentCount.Reset()
+	c.firewallStatesMaximumCount.Reset()
+	c.firewallStatesUsageRatio.Reset()
 }

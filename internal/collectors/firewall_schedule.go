@@ -68,12 +68,19 @@ func (c *FirewallScheduleCollector) CollectWithTarget(ch chan<- prometheus.Metri
 		return
 	}
 
+	// Reset metrics before collecting new data
+	c.resetMetrics()
+
 	// Update the metrics
-	c.firewallScheduleActive.Reset()
 	for _, schedule := range stats {
 		c.firewallScheduleActive.WithLabelValues(target.Host, schedule.Name).Set(float64(utils.BoolToFloat64(schedule.Active)))
 	}
 
 	// Collect the metrics
 	c.firewallScheduleActive.Collect(ch)
+}
+
+// resetMetrics resets all metrics in the collector.
+func (c *FirewallScheduleCollector) resetMetrics() {
+	c.firewallScheduleActive.Reset()
 }

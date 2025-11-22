@@ -95,6 +95,9 @@ func (c *CARPCollector) CollectWithTarget(ch chan<- prometheus.Metric, target *u
 		return
 	}
 
+	// Reset old metrics before collecting new data
+	c.resetMetrics()
+
 	// Update the system CARP metrics
 	c.carpEnabled.WithLabelValues(target.Host).Set(float64(utils.BoolToFloat64(stats.Enabled)))
 	c.carpMaintenanceModeEnabled.WithLabelValues(target.Host).Set(float64(utils.BoolToFloat64(stats.MaintenanceMode)))
@@ -117,8 +120,7 @@ func (c *CARPCollector) CollectWithTarget(ch chan<- prometheus.Metric, target *u
 		return
 	}
 
-	// Reset old metrics
-	c.carpVirtualIPStatus.Reset()
+	// Extract metrics for each virtual IP identified
 	for _, ip := range virtualIPs {
 		c.carpVirtualIPStatus.WithLabelValues(
 			target.Host,
@@ -134,6 +136,13 @@ func (c *CARPCollector) CollectWithTarget(ch chan<- prometheus.Metric, target *u
 	c.carpEnabled.Collect(ch)
 	c.carpMaintenanceModeEnabled.Collect(ch)
 	c.carpVirtualIPStatus.Collect(ch)
+}
+
+// resetMetrics resets all metrics in the collector.
+func (c *CARPCollector) resetMetrics() {
+	c.carpEnabled.Reset()
+	c.carpMaintenanceModeEnabled.Reset()
+	c.carpVirtualIPStatus.Reset()
 }
 
 // CARPStatusToFloat64 converts a CARP status string to a float64 value.

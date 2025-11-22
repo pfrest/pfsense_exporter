@@ -78,9 +78,10 @@ func (c *ServiceCollector) CollectWithTarget(ch chan<- prometheus.Metric, target
 		return
 	}
 
+	// Reset metrics before collecting new data
+	c.resetMetrics()
+
 	// Extract metrics for each service identified
-	c.serviceUp.Reset()
-	c.serviceEnabled.Reset()
 	for _, svc := range services {
 		// Update the metrics
 		c.serviceUp.WithLabelValues(target.Host, svc.Name).Set(float64(utils.BoolToFloat64(svc.Status)))
@@ -90,4 +91,10 @@ func (c *ServiceCollector) CollectWithTarget(ch chan<- prometheus.Metric, target
 	// Collect the metrics
 	c.serviceUp.Collect(ch)
 	c.serviceEnabled.Collect(ch)
+}
+
+// resetMetrics resets all metrics in the collector.
+func (c *ServiceCollector) resetMetrics() {
+	c.serviceUp.Reset()
+	c.serviceEnabled.Reset()
 }
