@@ -1065,6 +1065,7 @@
       {
         "allValue": "",
         "current": {},
+        "datasource": { "type": "prometheus", "uid": "$datasource" },
         "definition": "label_values(pfsense_system_memory_usage_ratio,host)",
         "description": "Selects the pfSense host to visualize.",
         "includeAll": true,

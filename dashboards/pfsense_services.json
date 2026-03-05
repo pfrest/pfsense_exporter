@@ -236,6 +236,7 @@
       },
       {
         "current": {},
+        "datasource": { "type": "prometheus", "uid": "$datasource" },
         "definition": "label_values(pfsense_service_up,host)",
         "description": "Selects the pfSense host to visualize.",
         "includeAll": true,
@@ -254,6 +255,7 @@
       },
       {
         "current": {},
+        "datasource": { "type": "prometheus", "uid": "$datasource" },
         "definition": "label_values(pfsense_service_up,name)",
         "description": "Selects the service to visualize.",
         "includeAll": true,
