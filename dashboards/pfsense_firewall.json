@@ -298,6 +298,7 @@
       {
         "allValue": "",
         "current": {},
+        "datasource": { "type": "prometheus", "uid": "$datasource" },
         "definition": "label_values(pfsense_firewall_states_usage_ratio,host)",
         "description": "Selects the pfSense host to visualize.",
         "includeAll": true,

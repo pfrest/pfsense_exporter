@@ -817,6 +817,7 @@
       },
       {
         "current": {},
+        "datasource": { "type": "prometheus", "uid": "$datasource" },
         "definition": "label_values(pfsense_interface_up,host)",
         "description": "Selects the pfSense host to visualize.",
         "includeAll": true,
@@ -835,6 +836,7 @@
       },
       {
         "current": {},
+        "datasource": { "type": "prometheus", "uid": "$datasource" },
         "definition": "label_values(pfsense_interface_up,descr)",
         "description": "Selects the interface to visualize.",
         "includeAll": true,
