@@ -20,7 +20,18 @@
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": ["pfsense"],
+      "targetBlank": false,
+      "title": "pfSense Dashboards",
+      "type": "dashboards"
+    }
+  ],
   "liveNow": true,
   "panels": [
     {
