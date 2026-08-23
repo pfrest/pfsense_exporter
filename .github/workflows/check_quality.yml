@@ -27,8 +27,7 @@ jobs:
 
       - name: Install grafana/dashboard-linter
         run: |
-          VERSION=v0.2.0
-          curl -sSfL "https://github.com/grafana/dashboard-linter/releases/download/${VERSION}/dashboard-linter_${VERSION}_linux_amd64.tar.gz" | tar -xz -C /usr/local/bin dashboard-linter
+          curl -sSfL "https://github.com/grafana/dashboard-linter/releases/download/v0.2.0/dashboard-linter_0.2.0_linux_amd64.tar.gz" | tar -xz -C /usr/local/bin dashboard-linter
 
       - name: Lint Grafana dashboards
         run: |
