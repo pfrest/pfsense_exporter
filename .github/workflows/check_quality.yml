@@ -12,6 +12,9 @@ on:
     branches:
       - main
 
+env:
+  GO_VERSION: "1.27"
+
 jobs:
   check_grafana_lint:
     runs-on: ubuntu-latest
@@ -25,7 +28,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
-          go-version: "1.24"
+          go-version: "${{ env.GO_VERSION }}"
 
       - name: Install grafana/dashboard-linter
         run: go install github.com/grafana/dashboard-linter@latest
@@ -59,10 +62,6 @@ jobs:
 
   check_gofmt:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version:
-          - "1.24"
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -72,7 +71,7 @@ jobs:
 
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: "${{ env.GO_VERSION }}"
           cache: false
 
       - name: Check gofmt code formatting
@@ -95,10 +94,6 @@ jobs:
   check_go_vet:
     runs-on: ubuntu-latest
     needs: [check_gofmt]
-    strategy:
-      matrix:
-        go-version:
-          - "1.24"
 
     steps:
       - name: Checkout
@@ -109,7 +104,7 @@ jobs:
 
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: "${{ env.GO_VERSION }}"
           cache: false
 
       - name: Run go vet
@@ -118,17 +113,13 @@ jobs:
   check_go_build:
     runs-on: ubuntu-latest
     needs: [check_go_vet]
-    strategy:
-      matrix:
-        go-version:
-          - "1.24"
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: "${{ env.GO_VERSION }}"
           cache: false
 
       - name: Build Go apps
@@ -137,17 +128,13 @@ jobs:
   check_go_tests:
     runs-on: ubuntu-latest
     needs: [check_go_build]
-    strategy:
-      matrix:
-        go-version:
-          - "1.24"
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: "${{ env.GO_VERSION }}"
           cache: false
 
       - name: Run Go tests
