@@ -2,6 +2,17 @@ apiVersion: v1
 entries:
   pfsense-exporter:
   - apiVersion: v2
+    appVersion: v0.0.10
+    created: "2026-08-23T04:16:44.993710628Z"
+    description: A Helm chart for the pfSense Exporter by pfREST
+    digest: b433a86345badd865bf813ea2e62be787b179281e6057aa62a648843a5fcf804
+    icon: https://github.com/pfrest.png
+    name: pfsense-exporter
+    type: application
+    urls:
+    - https://github.com/pfrest/pfsense_exporter/releases/download/v0.0.10/pfsense-exporter-0.0.10.tgz
+    version: 0.0.10
+  - apiVersion: v2
     appVersion: v0.0.9
     created: "2026-02-16T17:08:53.003029432Z"
     description: A Helm chart for the pfSense Exporter by pfREST
@@ -67,4 +78,4 @@ entries:
     urls:
     - https://github.com/pfrest/pfsense_exporter/releases/download/pfsense-exporter-0.0.4/pfsense-exporter-0.0.4.tgz
     version: 0.0.4
-generated: "2026-02-16T17:08:53.002561356Z"
+generated: "2026-08-23T04:16:44.993245048Z"
