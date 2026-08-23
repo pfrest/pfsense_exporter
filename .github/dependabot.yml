@@ -17,3 +17,16 @@ updates:
     commit-message:
       prefix: "chore(deps):"
     open-pull-requests-limit: 5
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
