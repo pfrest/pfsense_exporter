@@ -214,10 +214,16 @@ func TestTargetValidateMaxCollectorBufferSize(t *testing.T) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
-	// Test value too low
+	// Test legacy low value remains accepted now that the setting is deprecated
 	target = &Target{Host: "test.com", Port: 443, MaxCollectorBufferSize: 5}
+	if err := target.ValidateMaxCollectorBufferSize(); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	// Test invalid negative value
+	target = &Target{Host: "test.com", Port: 443, MaxCollectorBufferSize: -1}
 	if err := target.ValidateMaxCollectorBufferSize(); err == nil {
-		t.Error("Expected error for buffer size < 10")
+		t.Error("Expected error for negative buffer size")
 	}
 }
 
@@ -666,7 +672,25 @@ func TestTargetValidateAllErrorPaths(t *testing.T) {
 		t.Errorf("Expected max_concurrent_collectors error, got: %v", err)
 	}
 
-	// Test invalid MaxCollectorBufferSize < 10
+	// Test legacy MaxCollectorBufferSize < 10 remains valid now that the setting is deprecated
+	legacyBuffer := Target{
+		Host:                    "test.com",
+		Port:                    443,
+		Scheme:                  "https",
+		AuthMethod:              "basic",
+		Username:                "user",
+		Password:                "pass",
+		ValidateCert:            true,
+		Timeout:                 30,
+		MaxCollectorConcurrency: 5,
+		MaxCollectorBufferSize:  5,
+	}
+	_, err = legacyBuffer.Validate()
+	if err != nil {
+		t.Errorf("Unexpected validation error for deprecated MaxCollectorBufferSize < 10: %v", err)
+	}
+
+	// Test invalid negative MaxCollectorBufferSize
 	invalidBuffer := Target{
 		Host:                    "test.com",
 		Port:                    443,
@@ -677,11 +701,12 @@ func TestTargetValidateAllErrorPaths(t *testing.T) {
 		ValidateCert:            true,
 		Timeout:                 30,
 		MaxCollectorConcurrency: 5,
-		MaxCollectorBufferSize:  5, // Invalid - too low
+		MaxCollectorBufferSize:  -1,
 	}
 	_, err = invalidBuffer.Validate()
 	if err == nil {
-		t.Error("Expected validation error for MaxCollectorBufferSize < 10")
+		t.Error("Expected validation error for negative MaxCollectorBufferSize")
+		return
 	}
 	if !strings.Contains(err.Error(), "max_collector_buffer_size") {
 		t.Errorf("Expected max_collector_buffer_size error, got: %v", err)

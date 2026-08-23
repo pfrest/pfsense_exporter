@@ -31,7 +31,7 @@ type Target struct {
 	Timeout                 int      `yaml:"timeout"`                   // Timeout is the timeout for requests to the target.
 	Collectors              []string `yaml:"collectors"`                // Collectors is the list of collectors to use for the target.
 	MaxCollectorConcurrency int      `yaml:"max_collector_concurrency"` // MaxCollectorConcurrency is the maximum number of collectors allowed to run concurrently.
-	MaxCollectorBufferSize  int      `yaml:"max_collector_buffer_size"` // MaxCollectorBufferSize is the maximum size of the collector's metric buffer.
+	MaxCollectorBufferSize  int      `yaml:"max_collector_buffer_size"` // MaxCollectorBufferSize is deprecated and retained for backward compatibility.
 }
 
 // Validate validates the fields of a given Target.
@@ -192,20 +192,18 @@ func (t *Target) ValidateMaxCollectorConcurrency() error {
 	return nil
 }
 
-// ValidateMaxCollectorBufferSize checks that the global 'max_collector_buffer_size' field is set and is a valid number.
+// ValidateMaxCollectorBufferSize keeps the deprecated 'max_collector_buffer_size' field backward compatible.
 func (t *Target) ValidateMaxCollectorBufferSize() error {
 	// Default to 100 if not set
 	if t.MaxCollectorBufferSize == 0 {
 		t.MaxCollectorBufferSize = 100
 	}
 
-	// Check if the max_collector_buffer_size is within the valid range
-	if t.MaxCollectorBufferSize < 10 {
-		return fmt.Errorf("global 'max_collector_buffer_size' must be at least 10")
+	if t.MaxCollectorBufferSize < 0 {
+		return fmt.Errorf("global 'max_collector_buffer_size' must not be negative")
 	}
 
-	// Log the buffer size
-	log.Debug("config", "target %s using collector buffer size of %d", t.Host, t.MaxCollectorBufferSize)
+	log.Debug("config", "target %s configured deprecated collector buffer size of %d", t.Host, t.MaxCollectorBufferSize)
 	return nil
 }
 

@@ -44,7 +44,7 @@ Each item in the `targets` array has the following options:
 | `timeout`                   | int     | `30`      | Timeout (in seconds) for requests to the target. Must be between 5 and 360.                   |
 | `collectors`                | array   | —         | List of collectors to enable for this target. If empty, all collectors are enabled.           |
 | `max_collector_concurrency` | int     | `4`       | Maximum number of collectors allowed to run concurrently. Must be between 1 and 10.           |
-| `max_collector_buffer_size` | int     | `100`     | Maximum size of the collector's metric buffer. Must be at least 10. Large pfSense instances may need this value increased.                           |
+| `max_collector_buffer_size` | int     | `100`     | Deprecated compatibility setting. Metrics are streamed directly during collection, so large pfSense instances should not need this adjusted.          |
 
 ## Running the Exporter
 

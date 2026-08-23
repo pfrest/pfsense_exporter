@@ -16,6 +16,5 @@ targets:
     password: "pfsense"
     validate_cert: false
     max_collector_concurrency: 5
-    max_collector_buffer_size: 100
     collectors:
       - carp
