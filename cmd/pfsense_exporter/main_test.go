@@ -4,13 +4,14 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 )
 
 // TestMain is a basic test to ensure we can start the exporter with a basic config.
 func TestMain(t *testing.T) {
 	// Write a temporary config file to ./config.yml
 	config := `
-address: "localhost"
+address: "127.0.0.1"
 port: 28080
 targets:
   - host: "127.0.0.1"
@@ -32,8 +33,18 @@ targets:
 		main()
 	}()
 
-	// Make a request to the /metrics endpoint
-	resp, err := http.Get("http://localhost:28080/metrics")
+	// Make a request to the /metrics endpoint once the server is ready.
+	client := &http.Client{Timeout: 100 * time.Millisecond}
+	deadline := time.Now().Add(2 * time.Second)
+	var resp *http.Response
+	var err error
+	for time.Now().Before(deadline) {
+		resp, err = client.Get("http://127.0.0.1:28080/metrics")
+		if err == nil {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	if err != nil {
 		t.Fatalf("Failed to make GET request to /metrics: %v", err)
 	}
