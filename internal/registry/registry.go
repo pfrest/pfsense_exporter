@@ -65,17 +65,7 @@ func (mc *MasterCollector) Collect(ch chan<- prometheus.Metric) {
 				return
 			}
 
-			// Create a buffered channel for this collector's metrics
-			collectorCh := make(chan prometheus.Metric, mc.Target.MaxCollectorBufferSize)
-
-			// Collect metrics from this collector
-			collector.CollectWithTarget(collectorCh, mc.Target)
-			close(collectorCh)
-
-			// Forward all metrics to the main channel
-			for metric := range collectorCh {
-				ch <- metric
-			}
+			collector.CollectWithTarget(ch, mc.Target)
 		}(c)
 	}
 

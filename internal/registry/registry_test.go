@@ -1,7 +1,9 @@
 package registry
 
 import (
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/pfrest/pfsense_exporter/internal/log"
 	"github.com/pfrest/pfsense_exporter/internal/utils"
@@ -25,6 +27,26 @@ func (m *MockCollector) Describe(ch chan<- *prometheus.Desc) {
 func (m *MockCollector) CollectWithTarget(ch chan<- prometheus.Metric, target *utils.Target) {
 	m.called = true
 	// Don't close the channel here - let the caller handle it
+}
+
+type HighVolumeCollector struct {
+	name    string
+	desc    *prometheus.Desc
+	samples int
+}
+
+func (h *HighVolumeCollector) Name() string {
+	return h.name
+}
+
+func (h *HighVolumeCollector) Describe(ch chan<- *prometheus.Desc) {
+	ch <- h.desc
+}
+
+func (h *HighVolumeCollector) CollectWithTarget(ch chan<- prometheus.Metric, target *utils.Target) {
+	for i := 0; i < h.samples; i++ {
+		ch <- prometheus.MustNewConstMetric(h.desc, prometheus.GaugeValue, float64(i), strconv.Itoa(i))
+	}
 }
 
 func TestRegister(t *testing.T) {
@@ -132,6 +154,52 @@ func TestMasterCollectorCollect(t *testing.T) {
 	}
 	if !mock2.called {
 		t.Error("Expected collector2 to be called")
+	}
+}
+
+func TestMasterCollectorCollectStreamsMoreThanConfiguredBufferSize(t *testing.T) {
+	// Save original collectors and restore after test
+	originalCollectors := collectors
+	defer func() { collectors = originalCollectors }()
+
+	collector := &HighVolumeCollector{
+		name:    "high-volume",
+		desc:    prometheus.NewDesc("test_high_volume_metric", "Test metric", []string{"sample"}, nil),
+		samples: 25,
+	}
+	collectors = []TargetedCollector{collector}
+
+	target := &utils.Target{
+		Host:                    "test.com",
+		MaxCollectorConcurrency: 1,
+		MaxCollectorBufferSize:  10,
+		Collectors:              []string{"high-volume"},
+	}
+	mc := NewMasterCollector(target)
+
+	ch := make(chan prometheus.Metric)
+	done := make(chan int, 1)
+
+	go func() {
+		mc.Collect(ch)
+		close(ch)
+	}()
+
+	go func() {
+		count := 0
+		for range ch {
+			count++
+		}
+		done <- count
+	}()
+
+	select {
+	case count := <-done:
+		if count != collector.samples {
+			t.Fatalf("Expected %d metrics, got %d", collector.samples, count)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Collect timed out when collector emitted more metrics than MaxCollectorBufferSize")
 	}
 }
 
