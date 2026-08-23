@@ -25,15 +25,10 @@ jobs:
           # Make sure the actual branch is checked out when running on pull requests
           ref: ${{ github.head_ref }}
 
-      - name: Setup Go
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
-        with:
-          go-version: "${{ env.GO_VERSION }}"
-
       - name: Install grafana/dashboard-linter
-        run: go install github.com/grafana/dashboard-linter@latest
-        env:
-          GOBIN: /usr/local/bin/
+        run: |
+          VERSION=v0.2.0
+          curl -sSfL "https://github.com/grafana/dashboard-linter/releases/download/${VERSION}/dashboard-linter_${VERSION}_linux_amd64.tar.gz" | tar -xz -C /usr/local/bin dashboard-linter
 
       - name: Lint Grafana dashboards
         run: |
