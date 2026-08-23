@@ -20,7 +20,7 @@ scrape_configs:
     # MUST exactly match the target as its defined in the exporter configuration.
     static_configs:
       - targets:
-          - 'pfsense1.example.com''
+          - 'pfsense1.example.com'
           - 'pfsense2.example.com'
 
     relabel_configs:
