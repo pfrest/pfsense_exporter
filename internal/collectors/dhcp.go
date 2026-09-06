@@ -18,11 +18,13 @@ func init() {
 
 // DHCPCollector collects DHCP server and lease metrics.
 type DHCPCollector struct {
-	poolSize     *prometheus.GaugeVec
-	leasesActive *prometheus.GaugeVec
-	leasesOnline *prometheus.GaugeVec
-	utilization  *prometheus.GaugeVec
-	serverUp     *prometheus.GaugeVec
+	poolSize             *prometheus.GaugeVec
+	leasesActive         *prometheus.GaugeVec
+	leasesOnline         *prometheus.GaugeVec
+	utilization          *prometheus.GaugeVec
+	serverUp             *prometheus.GaugeVec
+	staticMappingsTotal  *prometheus.GaugeVec
+	staticMappingsOnline *prometheus.GaugeVec
 }
 
 // DHCPServerConfig represents a DHCP server configuration per interface.
@@ -91,6 +93,20 @@ func NewDHCPCollector() *DHCPCollector {
 			},
 			[]string{"host", "interface"},
 		),
+		staticMappingsTotal: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: registry.MetricsPrefix + "dhcp_static_mappings_total",
+				Help: "Total number of DHCP static mappings per interface.",
+			},
+			[]string{"host", "interface"},
+		),
+		staticMappingsOnline: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: registry.MetricsPrefix + "dhcp_static_mappings_online",
+				Help: "Number of online DHCP static mappings per interface.",
+			},
+			[]string{"host", "interface"},
+		),
 	}
 }
 
@@ -106,6 +122,8 @@ func (c *DHCPCollector) Describe(ch chan<- *prometheus.Desc) {
 	c.leasesOnline.Describe(ch)
 	c.utilization.Describe(ch)
 	c.serverUp.Describe(ch)
+	c.staticMappingsTotal.Describe(ch)
+	c.staticMappingsOnline.Describe(ch)
 }
 
 // CollectWithTarget fetches DHCP stats and sends them to the channel.
@@ -147,19 +165,10 @@ func (c *DHCPCollector) CollectWithTarget(ch chan<- prometheus.Metric, target *u
 	// Reset metrics before collecting new data
 	c.resetMetrics()
 
-	// Count active and online leases per interface
-	// active_status can be "active", "static", "expired", etc.
-	// online_status can be "active/online", "idle/offline", etc.
-	activeByInterface := make(map[string]float64)
-	onlineByInterface := make(map[string]float64)
+	// Build a lookup of leases by interface
+	leasesByInterface := make(map[string][]DHCPLease)
 	for _, lease := range leases {
-		status := strings.ToLower(lease.ActiveStatus)
-		if status == "active" || status == "static" {
-			activeByInterface[lease.Interface]++
-		}
-		if strings.Contains(strings.ToLower(lease.OnlineStatus), "online") {
-			onlineByInterface[lease.Interface]++
-		}
+		leasesByInterface[lease.Interface] = append(leasesByInterface[lease.Interface], lease)
 	}
 
 	// Process each DHCP server (one per interface)
@@ -169,19 +178,54 @@ func (c *DHCPCollector) CollectWithTarget(ch chan<- prometheus.Metric, target *u
 		// Server enabled status
 		c.serverUp.WithLabelValues(target.Host, iface).Set(utils.BoolToFloat64(server.Enable))
 
-		// Calculate total pool size (primary range + additional pools)
-		totalPoolSize := ipRangeSize(server.RangeFrom, server.RangeTo)
+		// Collect all pool ranges for this server (primary + additional)
+		ranges := []ipRange{{server.RangeFrom, server.RangeTo}}
 		for _, pool := range server.Pool {
-			totalPoolSize += ipRangeSize(pool.RangeFrom, pool.RangeTo)
+			ranges = append(ranges, ipRange{pool.RangeFrom, pool.RangeTo})
 		}
 
+		// Calculate total pool size
+		var totalPoolSize int64
+		for _, r := range ranges {
+			totalPoolSize += ipRangeSize(r.from, r.to)
+		}
 		c.poolSize.WithLabelValues(target.Host, iface).Set(float64(totalPoolSize))
 
-		// Active and online lease counts
-		active := activeByInterface[iface]
-		online := onlineByInterface[iface]
+		// Count leases that fall within the pool ranges
+		// active_status can be "active", "static", "expired", etc.
+		// online_status can be "active/online", "idle/offline", etc.
+		var active, online float64
+		for _, lease := range leasesByInterface[iface] {
+			if !ipInRanges(lease.IP, ranges) {
+				continue
+			}
+			status := strings.ToLower(lease.ActiveStatus)
+			if status == "active" || status == "static" {
+				active++
+			}
+			if strings.Contains(strings.ToLower(lease.OnlineStatus), "online") {
+				online++
+			}
+		}
 		c.leasesActive.WithLabelValues(target.Host, iface).Set(active)
 		c.leasesOnline.WithLabelValues(target.Host, iface).Set(online)
+
+		// Count static mappings (leases outside pool ranges with "static" status)
+		var staticTotal, staticOnline float64
+		for _, lease := range leasesByInterface[iface] {
+			if strings.ToLower(lease.ActiveStatus) != "static" {
+				continue
+			}
+			if ipInRanges(lease.IP, ranges) {
+				continue
+			}
+			staticTotal++
+			if strings.Contains(strings.ToLower(lease.OnlineStatus), "online") {
+				staticOnline++
+			}
+		}
+		c.staticMappingsTotal.WithLabelValues(target.Host, iface).Set(staticTotal)
+		c.staticMappingsOnline.WithLabelValues(target.Host, iface).Set(staticOnline)
 
 		// Utilization ratio
 		if totalPoolSize > 0 {
@@ -197,6 +241,8 @@ func (c *DHCPCollector) CollectWithTarget(ch chan<- prometheus.Metric, target *u
 	c.leasesOnline.Collect(ch)
 	c.utilization.Collect(ch)
 	c.serverUp.Collect(ch)
+	c.staticMappingsTotal.Collect(ch)
+	c.staticMappingsOnline.Collect(ch)
 }
 
 // resetMetrics resets all metrics in the collector.
@@ -206,6 +252,37 @@ func (c *DHCPCollector) resetMetrics() {
 	c.leasesOnline.Reset()
 	c.utilization.Reset()
 	c.serverUp.Reset()
+	c.staticMappingsTotal.Reset()
+	c.staticMappingsOnline.Reset()
+}
+
+// ipRange represents a start and end IP address pair.
+type ipRange struct {
+	from string
+	to   string
+}
+
+// ipInRanges checks if an IP address falls within any of the given ranges.
+func ipInRanges(ip string, ranges []ipRange) bool {
+	parsed := net.ParseIP(ip).To4()
+	if parsed == nil {
+		return false
+	}
+	ipInt := int64(binary.BigEndian.Uint32(parsed))
+
+	for _, r := range ranges {
+		fromIP := net.ParseIP(r.from).To4()
+		toIP := net.ParseIP(r.to).To4()
+		if fromIP == nil || toIP == nil {
+			continue
+		}
+		fromInt := int64(binary.BigEndian.Uint32(fromIP))
+		toInt := int64(binary.BigEndian.Uint32(toIP))
+		if ipInt >= fromInt && ipInt <= toInt {
+			return true
+		}
+	}
+	return false
 }
 
 // ipRangeSize calculates the number of usable IPs in a range (inclusive).

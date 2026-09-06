@@ -31,6 +31,12 @@ func TestNewDHCPCollector(t *testing.T) {
 	if collector.serverUp == nil {
 		t.Error("Expected serverUp metric to be initialized")
 	}
+	if collector.staticMappingsTotal == nil {
+		t.Error("Expected staticMappingsTotal metric to be initialized")
+	}
+	if collector.staticMappingsOnline == nil {
+		t.Error("Expected staticMappingsOnline metric to be initialized")
+	}
 }
 
 func TestDHCPCollectorName(t *testing.T) {
@@ -55,8 +61,8 @@ func TestDHCPCollectorDescribe(t *testing.T) {
 		count++
 	}
 
-	if count != 5 {
-		t.Errorf("Expected 5 metric descriptions, got %d", count)
+	if count != 7 {
+		t.Errorf("Expected 7 metric descriptions, got %d", count)
 	}
 }
 
@@ -205,5 +211,78 @@ func TestDHCPLeaseStruct(t *testing.T) {
 	}
 	if lease.ActiveStatus != "active" {
 		t.Errorf("Expected ActiveStatus 'active', got %s", lease.ActiveStatus)
+	}
+}
+
+func TestIPInRanges(t *testing.T) {
+	tests := []struct {
+		name     string
+		ip       string
+		ranges   []ipRange
+		expected bool
+	}{
+		{
+			"in primary range",
+			"192.168.1.150",
+			[]ipRange{{"192.168.1.100", "192.168.1.200"}},
+			true,
+		},
+		{
+			"at range start",
+			"192.168.1.100",
+			[]ipRange{{"192.168.1.100", "192.168.1.200"}},
+			true,
+		},
+		{
+			"at range end",
+			"192.168.1.200",
+			[]ipRange{{"192.168.1.100", "192.168.1.200"}},
+			true,
+		},
+		{
+			"below range",
+			"192.168.1.50",
+			[]ipRange{{"192.168.1.100", "192.168.1.200"}},
+			false,
+		},
+		{
+			"above range",
+			"192.168.1.250",
+			[]ipRange{{"192.168.1.100", "192.168.1.200"}},
+			false,
+		},
+		{
+			"in second range",
+			"192.168.1.215",
+			[]ipRange{
+				{"192.168.1.100", "192.168.1.200"},
+				{"192.168.1.210", "192.168.1.220"},
+			},
+			true,
+		},
+		{
+			"between ranges",
+			"192.168.1.205",
+			[]ipRange{
+				{"192.168.1.100", "192.168.1.200"},
+				{"192.168.1.210", "192.168.1.220"},
+			},
+			false,
+		},
+		{
+			"invalid IP",
+			"not-an-ip",
+			[]ipRange{{"192.168.1.100", "192.168.1.200"}},
+			false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ipInRanges(tt.ip, tt.ranges)
+			if result != tt.expected {
+				t.Errorf("ipInRanges(%q) = %v, want %v", tt.ip, result, tt.expected)
+			}
+		})
 	}
 }
