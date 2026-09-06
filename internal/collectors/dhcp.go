@@ -165,71 +165,87 @@ func (c *DHCPCollector) CollectWithTarget(ch chan<- prometheus.Metric, target *u
 	// Reset metrics before collecting new data
 	c.resetMetrics()
 
-	// Build a lookup of leases by interface
-	leasesByInterface := make(map[string][]DHCPLease)
-	for _, lease := range leases {
-		leasesByInterface[lease.Interface] = append(leasesByInterface[lease.Interface], lease)
+	// Build per-server pool ranges and calculate pool sizes
+	type serverInfo struct {
+		config DHCPServerConfig
+		ranges []ipRange
+		poolSize int64
 	}
-
-	// Process each DHCP server (one per interface)
+	serversByID := make(map[string]*serverInfo)
+	var serverOrder []string
 	for _, server := range servers {
-		iface := server.ID
-
-		// Server enabled status
-		c.serverUp.WithLabelValues(target.Host, iface).Set(utils.BoolToFloat64(server.Enable))
-
-		// Collect all pool ranges for this server (primary + additional)
 		ranges := []ipRange{{server.RangeFrom, server.RangeTo}}
 		for _, pool := range server.Pool {
 			ranges = append(ranges, ipRange{pool.RangeFrom, pool.RangeTo})
 		}
-
-		// Calculate total pool size
-		var totalPoolSize int64
+		var poolSize int64
 		for _, r := range ranges {
-			totalPoolSize += ipRangeSize(r.from, r.to)
+			poolSize += ipRangeSize(r.from, r.to)
 		}
-		c.poolSize.WithLabelValues(target.Host, iface).Set(float64(totalPoolSize))
+		serversByID[server.ID] = &serverInfo{config: server, ranges: ranges, poolSize: poolSize}
+		serverOrder = append(serverOrder, server.ID)
+	}
 
-		// Count leases that fall within the pool ranges
-		// active_status can be "active", "static", "expired", etc.
-		// online_status can be "active/online", "idle/offline", etc.
-		var active, online float64
-		for _, lease := range leasesByInterface[iface] {
-			if !ipInRanges(lease.IP, ranges) {
-				continue
-			}
-			status := strings.ToLower(lease.ActiveStatus)
-			if status == "active" || status == "static" {
-				active++
-			}
-			if strings.Contains(strings.ToLower(lease.OnlineStatus), "online") {
-				online++
-			}
-		}
-		c.leasesActive.WithLabelValues(target.Host, iface).Set(active)
-		c.leasesOnline.WithLabelValues(target.Host, iface).Set(online)
+	// Classify each lease: match to an interface by the "if" field if set,
+	// otherwise by checking which server's pool ranges contain the lease IP.
+	// active_status can be "active", "static", "expired", etc.
+	// online_status can be "active/online", "idle/offline", etc.
+	activeByInterface := make(map[string]float64)
+	onlineByInterface := make(map[string]float64)
+	staticTotalByInterface := make(map[string]float64)
+	staticOnlineByInterface := make(map[string]float64)
 
-		// Count static mappings (leases outside pool ranges with "static" status)
-		var staticTotal, staticOnline float64
-		for _, lease := range leasesByInterface[iface] {
-			if strings.ToLower(lease.ActiveStatus) != "static" {
-				continue
-			}
-			if ipInRanges(lease.IP, ranges) {
-				continue
-			}
-			staticTotal++
-			if strings.Contains(strings.ToLower(lease.OnlineStatus), "online") {
-				staticOnline++
+	for _, lease := range leases {
+		// Determine which interface this lease belongs to
+		iface := lease.Interface
+		if iface == "" {
+			// Dynamic leases may have a null interface; match by IP to pool ranges
+			for id, info := range serversByID {
+				if ipInRanges(lease.IP, info.ranges) {
+					iface = id
+					break
+				}
 			}
 		}
-		c.staticMappingsTotal.WithLabelValues(target.Host, iface).Set(staticTotal)
-		c.staticMappingsOnline.WithLabelValues(target.Host, iface).Set(staticOnline)
+		if iface == "" {
+			continue
+		}
 
-		// Utilization ratio
-		if totalPoolSize > 0 {
-			c.utilization.WithLabelValues(target.Host, iface).Set(active / float64(totalPoolSize))
+		info, ok := serversByID[iface]
+		if !ok {
+			continue
+		}
+
+		inPool := ipInRanges(lease.IP, info.ranges)
+		status := strings.ToLower(lease.ActiveStatus)
+		isOnline := strings.Contains(strings.ToLower(lease.OnlineStatus), "online")
+
+		if inPool && (status == "active" || status == "static") {
+			activeByInterface[iface]++
+			if isOnline {
+				onlineByInterface[iface]++
+			}
+		} else if !inPool && status == "static" {
+			staticTotalByInterface[iface]++
+			if isOnline {
+				staticOnlineByInterface[iface]++
+			}
+		}
+	}
+
+	// Emit metrics for each server
+	for _, iface := range serverOrder {
+		info := serversByID[iface]
+
+		c.serverUp.WithLabelValues(target.Host, iface).Set(utils.BoolToFloat64(info.config.Enable))
+		c.poolSize.WithLabelValues(target.Host, iface).Set(float64(info.poolSize))
+		c.leasesActive.WithLabelValues(target.Host, iface).Set(activeByInterface[iface])
+		c.leasesOnline.WithLabelValues(target.Host, iface).Set(onlineByInterface[iface])
+		c.staticMappingsTotal.WithLabelValues(target.Host, iface).Set(staticTotalByInterface[iface])
+		c.staticMappingsOnline.WithLabelValues(target.Host, iface).Set(staticOnlineByInterface[iface])
+
+		if info.poolSize > 0 {
+			c.utilization.WithLabelValues(target.Host, iface).Set(activeByInterface[iface] / float64(info.poolSize))
 		} else {
 			c.utilization.WithLabelValues(target.Host, iface).Set(0)
 		}
