@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"net"
+	"strings"
 
 	"github.com/pfrest/pfsense_exporter/internal/log"
 	"github.com/pfrest/pfsense_exporter/internal/registry"
@@ -147,13 +148,16 @@ func (c *DHCPCollector) CollectWithTarget(ch chan<- prometheus.Metric, target *u
 	c.resetMetrics()
 
 	// Count active and online leases per interface
+	// active_status can be "active", "static", "expired", etc.
+	// online_status can be "active/online", "idle/offline", etc.
 	activeByInterface := make(map[string]float64)
 	onlineByInterface := make(map[string]float64)
 	for _, lease := range leases {
-		if lease.ActiveStatus == "active" {
+		status := strings.ToLower(lease.ActiveStatus)
+		if status == "active" || status == "static" {
 			activeByInterface[lease.Interface]++
 		}
-		if lease.OnlineStatus == "online" {
+		if strings.Contains(strings.ToLower(lease.OnlineStatus), "online") {
 			onlineByInterface[lease.Interface]++
 		}
 	}

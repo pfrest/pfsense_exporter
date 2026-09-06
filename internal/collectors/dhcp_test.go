@@ -74,9 +74,9 @@ func TestDHCPCollectorCollectWithTarget(t *testing.T) {
 	}
 
 	leaseResponse := []DHCPLease{
-		{IP: "192.168.1.100", Interface: "lan", ActiveStatus: "active", OnlineStatus: "online"},
-		{IP: "192.168.1.101", Interface: "lan", ActiveStatus: "active", OnlineStatus: "offline"},
-		{IP: "192.168.1.102", Interface: "lan", ActiveStatus: "inactive", OnlineStatus: "offline"},
+		{IP: "192.168.1.100", Interface: "lan", ActiveStatus: "static", OnlineStatus: "active/online"},
+		{IP: "192.168.1.101", Interface: "lan", ActiveStatus: "active", OnlineStatus: "idle/offline"},
+		{IP: "192.168.1.102", Interface: "lan", ActiveStatus: "expired", OnlineStatus: "idle/offline"},
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
