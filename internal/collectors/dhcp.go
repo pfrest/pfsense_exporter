@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net"
 	"strings"
+	"sync"
 
 	"github.com/pfrest/pfsense_exporter/internal/log"
 	"github.com/pfrest/pfsense_exporter/internal/registry"
@@ -17,14 +18,16 @@ func init() {
 }
 
 // DHCPCollector collects DHCP server and lease metrics.
+// It uses prometheus.Desc + MustNewConstMetric instead of shared GaugeVec
+// to avoid race conditions when multiple targets are scraped concurrently.
 type DHCPCollector struct {
-	poolSize             *prometheus.GaugeVec
-	leasesActive         *prometheus.GaugeVec
-	leasesOnline         *prometheus.GaugeVec
-	utilization          *prometheus.GaugeVec
-	serverUp             *prometheus.GaugeVec
-	staticMappingsTotal  *prometheus.GaugeVec
-	staticMappingsOnline *prometheus.GaugeVec
+	poolSize             *prometheus.Desc
+	leasesActive         *prometheus.Desc
+	leasesOnline         *prometheus.Desc
+	utilization          *prometheus.Desc
+	serverEnabled        *prometheus.Desc
+	staticMappingsTotal  *prometheus.Desc
+	staticMappingsOnline *prometheus.Desc
 }
 
 // DHCPServerConfig represents a DHCP server configuration per interface.
@@ -57,55 +60,42 @@ type DHCPLease struct {
 
 // NewDHCPCollector is the constructor.
 func NewDHCPCollector() *DHCPCollector {
+	labels := []string{"host", "interface"}
 	return &DHCPCollector{
-		poolSize: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "dhcp_pool_size",
-				Help: "Total number of IP addresses available in the DHCP pool.",
-			},
-			[]string{"host", "interface"},
+		poolSize: prometheus.NewDesc(
+			registry.MetricsPrefix+"dhcp_pool_size",
+			"Total number of IP addresses available in the DHCP pool.",
+			labels, nil,
 		),
-		leasesActive: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "dhcp_leases_active",
-				Help: "Number of active DHCP leases.",
-			},
-			[]string{"host", "interface"},
+		leasesActive: prometheus.NewDesc(
+			registry.MetricsPrefix+"dhcp_leases_active",
+			"Number of active DHCP leases within the pool range.",
+			labels, nil,
 		),
-		leasesOnline: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "dhcp_leases_online",
-				Help: "Number of online DHCP leases.",
-			},
-			[]string{"host", "interface"},
+		leasesOnline: prometheus.NewDesc(
+			registry.MetricsPrefix+"dhcp_leases_online",
+			"Number of online DHCP leases within the pool range.",
+			labels, nil,
 		),
-		utilization: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "dhcp_pool_utilization",
-				Help: "DHCP pool utilization ratio (0.0 to 1.0).",
-			},
-			[]string{"host", "interface"},
+		utilization: prometheus.NewDesc(
+			registry.MetricsPrefix+"dhcp_pool_utilization",
+			"DHCP pool utilization ratio (0.0 to 1.0).",
+			labels, nil,
 		),
-		serverUp: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "dhcp_server_enabled",
-				Help: "Whether the DHCP server is enabled (1) or disabled (0) for an interface.",
-			},
-			[]string{"host", "interface"},
+		serverEnabled: prometheus.NewDesc(
+			registry.MetricsPrefix+"dhcp_server_enabled",
+			"Whether the DHCP server is enabled (1) or disabled (0) for an interface.",
+			labels, nil,
 		),
-		staticMappingsTotal: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "dhcp_static_mappings_total",
-				Help: "Total number of DHCP static mappings per interface.",
-			},
-			[]string{"host", "interface"},
+		staticMappingsTotal: prometheus.NewDesc(
+			registry.MetricsPrefix+"dhcp_static_mappings_total",
+			"Total number of DHCP static mappings per interface.",
+			labels, nil,
 		),
-		staticMappingsOnline: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "dhcp_static_mappings_online",
-				Help: "Number of online DHCP static mappings per interface.",
-			},
-			[]string{"host", "interface"},
+		staticMappingsOnline: prometheus.NewDesc(
+			registry.MetricsPrefix+"dhcp_static_mappings_online",
+			"Number of online DHCP static mappings per interface.",
+			labels, nil,
 		),
 	}
 }
@@ -117,70 +107,67 @@ func (c *DHCPCollector) Name() string {
 
 // Describe sends the metric descriptions to the channel.
 func (c *DHCPCollector) Describe(ch chan<- *prometheus.Desc) {
-	c.poolSize.Describe(ch)
-	c.leasesActive.Describe(ch)
-	c.leasesOnline.Describe(ch)
-	c.utilization.Describe(ch)
-	c.serverUp.Describe(ch)
-	c.staticMappingsTotal.Describe(ch)
-	c.staticMappingsOnline.Describe(ch)
+	ch <- c.poolSize
+	ch <- c.leasesActive
+	ch <- c.leasesOnline
+	ch <- c.utilization
+	ch <- c.serverEnabled
+	ch <- c.staticMappingsTotal
+	ch <- c.staticMappingsOnline
 }
 
 // CollectWithTarget fetches DHCP stats and sends them to the channel.
 func (c *DHCPCollector) CollectWithTarget(ch chan<- prometheus.Metric, target *utils.Target) {
-	// Fetch DHCP server configurations
-	serverResp, err := utils.Request(target, "GET", "/api/v2/services/dhcp_servers")
-	if err != nil {
-		log.Error("dhcp", "failed to fetch DHCP server config from host %s: %s", target.Host, err.Error())
+	// Fetch both API responses in parallel
+	var (
+		servers []DHCPServerConfig
+		leases  []DHCPLease
+		srvErr  error
+		lseErr  error
+		wg      sync.WaitGroup
+	)
+
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		servers, srvErr = fetchDHCPServers(target)
+	}()
+	go func() {
+		defer wg.Done()
+		leases, lseErr = fetchDHCPLeases(target)
+	}()
+	wg.Wait()
+
+	if srvErr != nil {
+		log.Error("dhcp", "failed to fetch DHCP server config from host %s: %s", target.Host, srvErr.Error())
 		return
 	}
-	if serverResp == nil || serverResp.Data == nil {
-		log.Error("dhcp", "received nil DHCP server config response from host %s", target.Host)
+	if lseErr != nil {
+		log.Error("dhcp", "failed to fetch DHCP leases from host %s: %s", target.Host, lseErr.Error())
 		return
 	}
 
-	var servers []DHCPServerConfig
-	if err := json.Unmarshal(serverResp.Data, &servers); err != nil {
-		log.Error("dhcp", "failed to unmarshal DHCP server config from host %s: %s", target.Host, err.Error())
-		return
-	}
-
-	// Fetch DHCP leases
-	leaseResp, err := utils.Request(target, "GET", "/api/v2/status/dhcp_server/leases")
-	if err != nil {
-		log.Error("dhcp", "failed to fetch DHCP leases from host %s: %s", target.Host, err.Error())
-		return
-	}
-	if leaseResp == nil || leaseResp.Data == nil {
-		log.Error("dhcp", "received nil DHCP leases response from host %s", target.Host)
-		return
-	}
-
-	var leases []DHCPLease
-	if err := json.Unmarshal(leaseResp.Data, &leases); err != nil {
-		log.Error("dhcp", "failed to unmarshal DHCP leases from host %s: %s", target.Host, err.Error())
-		return
-	}
-
-	// Reset metrics before collecting new data
-	c.resetMetrics()
-
-	// Build per-server pool ranges and calculate pool sizes
+	// Build per-server pool ranges (pre-parsed to uint32) and calculate pool sizes
 	type serverInfo struct {
-		config DHCPServerConfig
-		ranges []ipRange
+		config   DHCPServerConfig
+		ranges   []uint32Range
 		poolSize int64
 	}
-	serversByID := make(map[string]*serverInfo)
-	var serverOrder []string
+	serversByID := make(map[string]*serverInfo, len(servers))
+	serverOrder := make([]string, 0, len(servers))
 	for _, server := range servers {
-		ranges := []ipRange{{server.RangeFrom, server.RangeTo}}
+		var ranges []uint32Range
+		if r, ok := parseUint32Range(server.RangeFrom, server.RangeTo); ok {
+			ranges = append(ranges, r)
+		}
 		for _, pool := range server.Pool {
-			ranges = append(ranges, ipRange{pool.RangeFrom, pool.RangeTo})
+			if r, ok := parseUint32Range(pool.RangeFrom, pool.RangeTo); ok {
+				ranges = append(ranges, r)
+			}
 		}
 		var poolSize int64
 		for _, r := range ranges {
-			poolSize += ipRangeSize(r.from, r.to)
+			poolSize += r.size()
 		}
 		serversByID[server.ID] = &serverInfo{config: server, ranges: ranges, poolSize: poolSize}
 		serverOrder = append(serverOrder, server.ID)
@@ -188,44 +175,51 @@ func (c *DHCPCollector) CollectWithTarget(ch chan<- prometheus.Metric, target *u
 
 	// Classify each lease: match to an interface by the "if" field if set,
 	// otherwise by checking which server's pool ranges contain the lease IP.
-	// active_status can be "active", "static", "expired", etc.
-	// online_status can be "active/online", "idle/offline", etc.
-	activeByInterface := make(map[string]float64)
-	onlineByInterface := make(map[string]float64)
-	staticTotalByInterface := make(map[string]float64)
-	staticOnlineByInterface := make(map[string]float64)
+	// Ranges across servers should not overlap; if they do, the first match wins.
+	activeByInterface := make(map[string]float64, len(servers))
+	onlineByInterface := make(map[string]float64, len(servers))
+	staticTotalByInterface := make(map[string]float64, len(servers))
+	staticOnlineByInterface := make(map[string]float64, len(servers))
 
 	for _, lease := range leases {
+		leaseIP := ipToUint32(lease.IP)
+		if leaseIP == 0 {
+			continue
+		}
+
 		// Determine which interface this lease belongs to
 		iface := lease.Interface
+		var inPool bool
 		if iface == "" {
 			// Dynamic leases may have a null interface; match by IP to pool ranges
-			for id, info := range serversByID {
-				if ipInRanges(lease.IP, info.ranges) {
+			for _, id := range serverOrder {
+				if ipInUint32Ranges(leaseIP, serversByID[id].ranges) {
 					iface = id
+					inPool = true
 					break
 				}
+			}
+		} else {
+			info, ok := serversByID[iface]
+			if ok {
+				inPool = ipInUint32Ranges(leaseIP, info.ranges)
 			}
 		}
 		if iface == "" {
 			continue
 		}
-
-		info, ok := serversByID[iface]
-		if !ok {
+		if _, ok := serversByID[iface]; !ok {
 			continue
 		}
 
-		inPool := ipInRanges(lease.IP, info.ranges)
-		status := strings.ToLower(lease.ActiveStatus)
 		isOnline := strings.Contains(strings.ToLower(lease.OnlineStatus), "online")
 
-		if inPool && (status == "active" || status == "static") {
+		if inPool && (strings.EqualFold(lease.ActiveStatus, "active") || strings.EqualFold(lease.ActiveStatus, "static")) {
 			activeByInterface[iface]++
 			if isOnline {
 				onlineByInterface[iface]++
 			}
-		} else if !inPool && status == "static" {
+		} else if !inPool && strings.EqualFold(lease.ActiveStatus, "static") {
 			staticTotalByInterface[iface]++
 			if isOnline {
 				staticOnlineByInterface[iface]++
@@ -237,88 +231,97 @@ func (c *DHCPCollector) CollectWithTarget(ch chan<- prometheus.Metric, target *u
 	for _, iface := range serverOrder {
 		info := serversByID[iface]
 
-		c.serverUp.WithLabelValues(target.Host, iface).Set(utils.BoolToFloat64(info.config.Enable))
-		c.poolSize.WithLabelValues(target.Host, iface).Set(float64(info.poolSize))
-		c.leasesActive.WithLabelValues(target.Host, iface).Set(activeByInterface[iface])
-		c.leasesOnline.WithLabelValues(target.Host, iface).Set(onlineByInterface[iface])
-		c.staticMappingsTotal.WithLabelValues(target.Host, iface).Set(staticTotalByInterface[iface])
-		c.staticMappingsOnline.WithLabelValues(target.Host, iface).Set(staticOnlineByInterface[iface])
+		ch <- prometheus.MustNewConstMetric(c.serverEnabled, prometheus.GaugeValue, utils.BoolToFloat64(info.config.Enable), target.Host, iface)
+		ch <- prometheus.MustNewConstMetric(c.poolSize, prometheus.GaugeValue, float64(info.poolSize), target.Host, iface)
+		ch <- prometheus.MustNewConstMetric(c.leasesActive, prometheus.GaugeValue, activeByInterface[iface], target.Host, iface)
+		ch <- prometheus.MustNewConstMetric(c.leasesOnline, prometheus.GaugeValue, onlineByInterface[iface], target.Host, iface)
+		ch <- prometheus.MustNewConstMetric(c.staticMappingsTotal, prometheus.GaugeValue, staticTotalByInterface[iface], target.Host, iface)
+		ch <- prometheus.MustNewConstMetric(c.staticMappingsOnline, prometheus.GaugeValue, staticOnlineByInterface[iface], target.Host, iface)
 
 		if info.poolSize > 0 {
-			c.utilization.WithLabelValues(target.Host, iface).Set(activeByInterface[iface] / float64(info.poolSize))
+			ch <- prometheus.MustNewConstMetric(c.utilization, prometheus.GaugeValue, activeByInterface[iface]/float64(info.poolSize), target.Host, iface)
 		} else {
-			c.utilization.WithLabelValues(target.Host, iface).Set(0)
+			ch <- prometheus.MustNewConstMetric(c.utilization, prometheus.GaugeValue, 0, target.Host, iface)
 		}
 	}
-
-	// Collect all metrics
-	c.poolSize.Collect(ch)
-	c.leasesActive.Collect(ch)
-	c.leasesOnline.Collect(ch)
-	c.utilization.Collect(ch)
-	c.serverUp.Collect(ch)
-	c.staticMappingsTotal.Collect(ch)
-	c.staticMappingsOnline.Collect(ch)
 }
 
-// resetMetrics resets all metrics in the collector.
-func (c *DHCPCollector) resetMetrics() {
-	c.poolSize.Reset()
-	c.leasesActive.Reset()
-	c.leasesOnline.Reset()
-	c.utilization.Reset()
-	c.serverUp.Reset()
-	c.staticMappingsTotal.Reset()
-	c.staticMappingsOnline.Reset()
-}
-
-// ipRange represents a start and end IP address pair.
-type ipRange struct {
-	from string
-	to   string
-}
-
-// ipInRanges checks if an IP address falls within any of the given ranges.
-func ipInRanges(ip string, ranges []ipRange) bool {
-	parsed := net.ParseIP(ip).To4()
-	if parsed == nil {
-		return false
+// fetchDHCPServers retrieves DHCP server configurations from the target.
+func fetchDHCPServers(target *utils.Target) ([]DHCPServerConfig, error) {
+	resp, err := utils.Request(target, "GET", "/api/v2/services/dhcp_servers")
+	if err != nil {
+		return nil, err
 	}
-	ipInt := int64(binary.BigEndian.Uint32(parsed))
+	if resp == nil || resp.Data == nil {
+		return nil, nil
+	}
+	var servers []DHCPServerConfig
+	if err := json.Unmarshal(resp.Data, &servers); err != nil {
+		return nil, err
+	}
+	return servers, nil
+}
 
+// fetchDHCPLeases retrieves DHCP lease data from the target.
+func fetchDHCPLeases(target *utils.Target) ([]DHCPLease, error) {
+	resp, err := utils.Request(target, "GET", "/api/v2/status/dhcp_server/leases")
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil || resp.Data == nil {
+		return nil, nil
+	}
+	var leases []DHCPLease
+	if err := json.Unmarshal(resp.Data, &leases); err != nil {
+		return nil, err
+	}
+	return leases, nil
+}
+
+// uint32Range represents a pre-parsed IPv4 address range.
+type uint32Range struct {
+	from uint32
+	to   uint32
+}
+
+// size returns the number of IPs in the range (inclusive).
+func (r uint32Range) size() int64 {
+	return int64(r.to-r.from) + 1
+}
+
+// parseUint32Range parses two IPv4 address strings into a uint32Range.
+func parseUint32Range(from, to string) (uint32Range, bool) {
+	f := ipToUint32(from)
+	t := ipToUint32(to)
+	if f == 0 || t == 0 || t < f {
+		return uint32Range{}, false
+	}
+	return uint32Range{from: f, to: t}, true
+}
+
+// ipToUint32 parses an IPv4 address string to a uint32. Returns 0 on failure.
+func ipToUint32(s string) uint32 {
+	if s == "" {
+		return 0
+	}
+	ip := net.ParseIP(s)
+	if ip == nil {
+		return 0
+	}
+	ip4 := ip.To4()
+	if ip4 == nil {
+		return 0
+	}
+	return binary.BigEndian.Uint32(ip4)
+}
+
+// ipInUint32Ranges checks if a uint32 IP falls within any of the given ranges.
+func ipInUint32Ranges(ip uint32, ranges []uint32Range) bool {
 	for _, r := range ranges {
-		fromIP := net.ParseIP(r.from).To4()
-		toIP := net.ParseIP(r.to).To4()
-		if fromIP == nil || toIP == nil {
-			continue
-		}
-		fromInt := int64(binary.BigEndian.Uint32(fromIP))
-		toInt := int64(binary.BigEndian.Uint32(toIP))
-		if ipInt >= fromInt && ipInt <= toInt {
+		if ip >= r.from && ip <= r.to {
 			return true
 		}
 	}
 	return false
 }
 
-// ipRangeSize calculates the number of usable IPs in a range (inclusive).
-func ipRangeSize(from, to string) int64 {
-	if from == "" || to == "" {
-		return 0
-	}
-
-	fromIP := net.ParseIP(from).To4()
-	toIP := net.ParseIP(to).To4()
-	if fromIP == nil || toIP == nil {
-		return 0
-	}
-
-	fromInt := int64(binary.BigEndian.Uint32(fromIP))
-	toInt := int64(binary.BigEndian.Uint32(toIP))
-
-	if toInt < fromInt {
-		return 0
-	}
-
-	return toInt - fromInt + 1
-}
