@@ -56,7 +56,7 @@ jobs:
           go build -ldflags "-X 'main.version=${{ github.ref_name }}'" -o ${{ matrix.build_name }} ./cmd/pfsense_exporter
 
       - name: Upload build as release asset
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: ${{ matrix.build_name }}
 
@@ -119,7 +119,7 @@ jobs:
         run: helm package charts/pfsense-exporter --version ${{ steps.get_version.outputs.VERSION }} --app-version ${{ github.ref_name }}
           
       - name: Upload Helm chart as release asset
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: pfsense-exporter-${{ steps.get_version.outputs.VERSION }}.tgz
 
