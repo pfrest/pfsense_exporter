@@ -16,18 +16,18 @@ func init() {
 
 // InterfaceCollector collects metrics about interface status.
 type InterfaceCollector struct {
-	interfaceUp                *prometheus.GaugeVec
-	interfaceInErrsCount       *prometheus.GaugeVec
-	interfaceOutErrsCount      *prometheus.GaugeVec
-	interfaceCollisionsCount   *prometheus.GaugeVec
-	interfaceInBytesCount      *prometheus.GaugeVec
-	interfaceInBytesPassCount  *prometheus.GaugeVec
-	interfaceOutBytesCount     *prometheus.GaugeVec
-	interfaceOutBytesPassCount *prometheus.GaugeVec
-	interfaceInPktsCount       *prometheus.GaugeVec
-	interfaceInPktsPassCount   *prometheus.GaugeVec
-	interfaceOutPktsCount      *prometheus.GaugeVec
-	interfaceOutPktsPassCount  *prometheus.GaugeVec
+	interfaceUp              *prometheus.Desc
+	interfaceInErrsCount     *prometheus.Desc
+	interfaceOutErrsCount    *prometheus.Desc
+	interfaceCollisionsCount *prometheus.Desc
+	interfaceInBytesCount    *prometheus.Desc
+	interfaceInPassBytesCount *prometheus.Desc
+	interfaceOutBytesCount    *prometheus.Desc
+	interfaceOutPassBytesCount *prometheus.Desc
+	interfaceInPktsCount      *prometheus.Desc
+	interfaceInPassPktsCount  *prometheus.Desc
+	interfaceOutPktsCount     *prometheus.Desc
+	interfaceOutPassPktsCount *prometheus.Desc
 }
 
 // InterfaceStats represents the structure of the interface status data returned by the API.
@@ -49,92 +49,70 @@ type InterfaceStats struct {
 	OutPktsPass  float64 `json:"outpktspass"`
 }
 
-// NewInterfaceCollector is the constructor
+// NewInterfaceCollector is the constructor.
 func NewInterfaceCollector() *InterfaceCollector {
+	gaugeLabels := []string{"host", "name", "descr", "hwif", "status"}
+	counterLabels := []string{"host", "name", "descr", "hwif"}
 	return &InterfaceCollector{
-		interfaceUp: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "interface_up",
-				Help: "Whether the interface is up (1) or down (0).",
-			},
-			[]string{"host", "name", "descr", "hwif", "status"},
+		interfaceUp: prometheus.NewDesc(
+			registry.MetricsPrefix+"interface_up",
+			"Whether the interface is up (1) or down (0).",
+			gaugeLabels, nil,
 		),
-		interfaceInErrsCount: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "interface_in_errs_count",
-				Help: "The number of input errors on the interface.",
-			},
-			[]string{"host", "name", "descr", "hwif"},
+		interfaceInErrsCount: prometheus.NewDesc(
+			registry.MetricsPrefix+"interface_in_errs_count",
+			"The number of input errors on the interface.",
+			counterLabels, nil,
 		),
-		interfaceOutErrsCount: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "interface_out_errs_count",
-				Help: "The number of output errors on the interface.",
-			},
-			[]string{"host", "name", "descr", "hwif"},
+		interfaceOutErrsCount: prometheus.NewDesc(
+			registry.MetricsPrefix+"interface_out_errs_count",
+			"The number of output errors on the interface.",
+			counterLabels, nil,
 		),
-		interfaceCollisionsCount: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "interface_collisions_count",
-				Help: "The number of collisions on the interface.",
-			},
-			[]string{"host", "name", "descr", "hwif"},
+		interfaceCollisionsCount: prometheus.NewDesc(
+			registry.MetricsPrefix+"interface_collisions_count",
+			"The number of collisions on the interface.",
+			counterLabels, nil,
 		),
-		interfaceInBytesCount: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "interface_in_bytes",
-				Help: "The number of input bytes on the interface.",
-			},
-			[]string{"host", "name", "descr", "hwif"},
+		interfaceInBytesCount: prometheus.NewDesc(
+			registry.MetricsPrefix+"interface_in_bytes",
+			"The number of input bytes on the interface.",
+			counterLabels, nil,
 		),
-		interfaceInBytesPassCount: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "interface_in_pass_bytes",
-				Help: "The number of input bytes passed on the interface.",
-			},
-			[]string{"host", "name", "descr", "hwif"},
+		interfaceInPassBytesCount: prometheus.NewDesc(
+			registry.MetricsPrefix+"interface_in_pass_bytes",
+			"The number of input bytes passed on the interface.",
+			counterLabels, nil,
 		),
-		interfaceOutBytesCount: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "interface_out_bytes",
-				Help: "The number of output bytes on the interface.",
-			},
-			[]string{"host", "name", "descr", "hwif"},
+		interfaceOutBytesCount: prometheus.NewDesc(
+			registry.MetricsPrefix+"interface_out_bytes",
+			"The number of output bytes on the interface.",
+			counterLabels, nil,
 		),
-		interfaceOutBytesPassCount: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "interface_out_pass_bytes",
-				Help: "The number of output bytes passed on the interface.",
-			},
-			[]string{"host", "name", "descr", "hwif"},
+		interfaceOutPassBytesCount: prometheus.NewDesc(
+			registry.MetricsPrefix+"interface_out_pass_bytes",
+			"The number of output bytes passed on the interface.",
+			counterLabels, nil,
 		),
-		interfaceInPktsCount: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "interface_in_pkts_count",
-				Help: "The number of input packets handled by the interface.",
-			},
-			[]string{"host", "name", "descr", "hwif"},
+		interfaceInPktsCount: prometheus.NewDesc(
+			registry.MetricsPrefix+"interface_in_pkts_count",
+			"The number of input packets handled by the interface.",
+			counterLabels, nil,
 		),
-		interfaceInPktsPassCount: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "interface_in_pass_pkts_count",
-				Help: "The number of input packets passed on the interface.",
-			},
-			[]string{"host", "name", "descr", "hwif"},
+		interfaceInPassPktsCount: prometheus.NewDesc(
+			registry.MetricsPrefix+"interface_in_pass_pkts_count",
+			"The number of input packets passed on the interface.",
+			counterLabels, nil,
 		),
-		interfaceOutPktsCount: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "interface_out_pkts_count",
-				Help: "The number of output packets handled by the interface.",
-			},
-			[]string{"host", "name", "descr", "hwif"},
+		interfaceOutPktsCount: prometheus.NewDesc(
+			registry.MetricsPrefix+"interface_out_pkts_count",
+			"The number of output packets handled by the interface.",
+			counterLabels, nil,
 		),
-		interfaceOutPktsPassCount: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: registry.MetricsPrefix + "interface_out_pass_pkts_count",
-				Help: "The number of output packets passed on the interface.",
-			},
-			[]string{"host", "name", "descr", "hwif"},
+		interfaceOutPassPktsCount: prometheus.NewDesc(
+			registry.MetricsPrefix+"interface_out_pass_pkts_count",
+			"The number of output packets passed on the interface.",
+			counterLabels, nil,
 		),
 	}
 }
@@ -146,22 +124,22 @@ func (c *InterfaceCollector) Name() string {
 
 // Describe sends the metric descriptions to the channel.
 func (c *InterfaceCollector) Describe(ch chan<- *prometheus.Desc) {
-	c.interfaceInErrsCount.Describe(ch)
-	c.interfaceOutErrsCount.Describe(ch)
-	c.interfaceCollisionsCount.Describe(ch)
-	c.interfaceInBytesCount.Describe(ch)
-	c.interfaceInBytesPassCount.Describe(ch)
-	c.interfaceOutBytesCount.Describe(ch)
-	c.interfaceOutBytesPassCount.Describe(ch)
-	c.interfaceInPktsCount.Describe(ch)
-	c.interfaceInPktsPassCount.Describe(ch)
-	c.interfaceOutPktsCount.Describe(ch)
-	c.interfaceOutPktsPassCount.Describe(ch)
+	ch <- c.interfaceUp
+	ch <- c.interfaceInErrsCount
+	ch <- c.interfaceOutErrsCount
+	ch <- c.interfaceCollisionsCount
+	ch <- c.interfaceInBytesCount
+	ch <- c.interfaceInPassBytesCount
+	ch <- c.interfaceOutBytesCount
+	ch <- c.interfaceOutPassBytesCount
+	ch <- c.interfaceInPktsCount
+	ch <- c.interfaceInPassPktsCount
+	ch <- c.interfaceOutPktsCount
+	ch <- c.interfaceOutPassPktsCount
 }
 
-// Collect fetches the stats and sends them to the channel.
+// CollectWithTarget fetches interface stats and sends them to the channel.
 func (c *InterfaceCollector) CollectWithTarget(ch chan<- prometheus.Metric, target *utils.Target) {
-	// Collect metrics from the target
 	resp, err := utils.Request(target, "GET", "/api/v2/status/interfaces")
 	if err != nil {
 		log.Error("interfaces", "failed to fetch interface statuses from host %s: %s", target.Host, err.Error())
@@ -172,65 +150,29 @@ func (c *InterfaceCollector) CollectWithTarget(ch chan<- prometheus.Metric, targ
 		return
 	}
 
-	// Convert the data to an array of InterfaceStats
 	var interfaces []InterfaceStats
 	if err := json.Unmarshal(resp.Data, &interfaces); err != nil {
 		log.Error("interfaces", "failed to unmarshal interfaces response from host %s: %s", target.Host, err.Error())
 		return
 	}
 
-	// Reset metrics before collecting new data
-	c.resetMetrics()
-
-	// Extract metrics for each interface identified
 	for _, iface := range interfaces {
-		// Update the metrics
-		c.interfaceUp.WithLabelValues(target.Host, iface.Name, iface.Descr, iface.Hwif, iface.Status).Set(interfaceStatusToFloat64(iface.Status))
-		c.interfaceInErrsCount.WithLabelValues(target.Host, iface.Name, iface.Descr, iface.Hwif).Set(float64(iface.InErrs))
-		c.interfaceOutErrsCount.WithLabelValues(target.Host, iface.Name, iface.Descr, iface.Hwif).Set(float64(iface.OutErrs))
-		c.interfaceCollisionsCount.WithLabelValues(target.Host, iface.Name, iface.Descr, iface.Hwif).Set(float64(iface.Collisions))
-		c.interfaceInBytesCount.WithLabelValues(target.Host, iface.Name, iface.Descr, iface.Hwif).Set(float64(iface.InBytes))
-		c.interfaceInBytesPassCount.WithLabelValues(target.Host, iface.Name, iface.Descr, iface.Hwif).Set(float64(iface.InBytesPass))
-		c.interfaceOutBytesCount.WithLabelValues(target.Host, iface.Name, iface.Descr, iface.Hwif).Set(float64(iface.OutBytes))
-		c.interfaceOutBytesPassCount.WithLabelValues(target.Host, iface.Name, iface.Descr, iface.Hwif).Set(float64(iface.OutBytesPass))
-		c.interfaceInPktsCount.WithLabelValues(target.Host, iface.Name, iface.Descr, iface.Hwif).Set(float64(iface.InPkts))
-		c.interfaceInPktsPassCount.WithLabelValues(target.Host, iface.Name, iface.Descr, iface.Hwif).Set(float64(iface.InPktsPass))
-		c.interfaceOutPktsCount.WithLabelValues(target.Host, iface.Name, iface.Descr, iface.Hwif).Set(float64(iface.OutPkts))
-		c.interfaceOutPktsPassCount.WithLabelValues(target.Host, iface.Name, iface.Descr, iface.Hwif).Set(float64(iface.OutPktsPass))
+		ch <- prometheus.MustNewConstMetric(c.interfaceUp, prometheus.GaugeValue, interfaceStatusToFloat64(iface.Status), target.Host, iface.Name, iface.Descr, iface.Hwif, iface.Status)
+		ch <- prometheus.MustNewConstMetric(c.interfaceInErrsCount, prometheus.CounterValue, iface.InErrs, target.Host, iface.Name, iface.Descr, iface.Hwif)
+		ch <- prometheus.MustNewConstMetric(c.interfaceOutErrsCount, prometheus.CounterValue, iface.OutErrs, target.Host, iface.Name, iface.Descr, iface.Hwif)
+		ch <- prometheus.MustNewConstMetric(c.interfaceCollisionsCount, prometheus.CounterValue, iface.Collisions, target.Host, iface.Name, iface.Descr, iface.Hwif)
+		ch <- prometheus.MustNewConstMetric(c.interfaceInBytesCount, prometheus.CounterValue, iface.InBytes, target.Host, iface.Name, iface.Descr, iface.Hwif)
+		ch <- prometheus.MustNewConstMetric(c.interfaceInPassBytesCount, prometheus.CounterValue, iface.InBytesPass, target.Host, iface.Name, iface.Descr, iface.Hwif)
+		ch <- prometheus.MustNewConstMetric(c.interfaceOutBytesCount, prometheus.CounterValue, iface.OutBytes, target.Host, iface.Name, iface.Descr, iface.Hwif)
+		ch <- prometheus.MustNewConstMetric(c.interfaceOutPassBytesCount, prometheus.CounterValue, iface.OutBytesPass, target.Host, iface.Name, iface.Descr, iface.Hwif)
+		ch <- prometheus.MustNewConstMetric(c.interfaceInPktsCount, prometheus.CounterValue, iface.InPkts, target.Host, iface.Name, iface.Descr, iface.Hwif)
+		ch <- prometheus.MustNewConstMetric(c.interfaceInPassPktsCount, prometheus.CounterValue, iface.InPktsPass, target.Host, iface.Name, iface.Descr, iface.Hwif)
+		ch <- prometheus.MustNewConstMetric(c.interfaceOutPktsCount, prometheus.CounterValue, iface.OutPkts, target.Host, iface.Name, iface.Descr, iface.Hwif)
+		ch <- prometheus.MustNewConstMetric(c.interfaceOutPassPktsCount, prometheus.CounterValue, iface.OutPktsPass, target.Host, iface.Name, iface.Descr, iface.Hwif)
 	}
-
-	// Collect the metrics
-	c.interfaceUp.Collect(ch)
-	c.interfaceInErrsCount.Collect(ch)
-	c.interfaceOutErrsCount.Collect(ch)
-	c.interfaceCollisionsCount.Collect(ch)
-	c.interfaceInBytesCount.Collect(ch)
-	c.interfaceInBytesPassCount.Collect(ch)
-	c.interfaceOutBytesCount.Collect(ch)
-	c.interfaceOutBytesPassCount.Collect(ch)
-	c.interfaceInPktsCount.Collect(ch)
-	c.interfaceInPktsPassCount.Collect(ch)
-	c.interfaceOutPktsCount.Collect(ch)
-	c.interfaceOutPktsPassCount.Collect(ch)
 }
 
-// resetMetrics resets all metrics in the collector.
-func (c *InterfaceCollector) resetMetrics() {
-	c.interfaceUp.Reset()
-	c.interfaceInErrsCount.Reset()
-	c.interfaceOutErrsCount.Reset()
-	c.interfaceCollisionsCount.Reset()
-	c.interfaceInBytesCount.Reset()
-	c.interfaceInBytesPassCount.Reset()
-	c.interfaceOutBytesCount.Reset()
-	c.interfaceOutBytesPassCount.Reset()
-	c.interfaceInPktsCount.Reset()
-	c.interfaceInPktsPassCount.Reset()
-	c.interfaceOutPktsCount.Reset()
-	c.interfaceOutPktsPassCount.Reset()
-}
-
-// statusToFloat64 converts the interface status string to a float64 for Prometheus metrics.
+// interfaceStatusToFloat64 converts the interface status string to a float64 for Prometheus metrics.
 func interfaceStatusToFloat64(status string) float64 {
 	if status == "up" {
 		return 1.0

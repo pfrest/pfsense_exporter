@@ -123,7 +123,7 @@
         "type": "prometheus",
         "uid": "$datasource"
       },
-      "description": "Displays the count of bytes passed by a specific interface on the system. This includes both bytes received (in) and sent (out) by the interface.",
+      "description": "Rate of bytes passed per second by a specific interface. This includes both bytes received (in) and sent (out) by the interface.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -176,7 +176,8 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "Bps"
         },
         "overrides": []
       },
@@ -207,8 +208,8 @@
             "type": "prometheus",
             "uid": "$datasource"
           },
-          "editorMode": "builder",
-          "expr": "pfsense_interface_in_pass_bytes{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}",
+          "editorMode": "code",
+          "expr": "rate(pfsense_interface_in_pass_bytes{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}[$__rate_interval])",
           "legendFormat": "In: {{ descr }} ({{ host }})",
           "range": true,
           "refId": "A"
@@ -218,15 +219,15 @@
             "type": "prometheus",
             "uid": "$datasource"
           },
-          "editorMode": "builder",
-          "expr": "pfsense_interface_out_pass_bytes{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}",
+          "editorMode": "code",
+          "expr": "rate(pfsense_interface_out_pass_bytes{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}[$__rate_interval])",
           "hide": false,
           "legendFormat": "Out: {{ descr }} ({{ host }})",
           "range": true,
           "refId": "B"
         }
       ],
-      "title": "Interface Pass Bytes",
+      "title": "Interface Pass Bytes Rate",
       "type": "timeseries"
     },
     {
@@ -234,7 +235,7 @@
         "type": "prometheus",
         "uid": "$datasource"
       },
-      "description": "Displays the number of packets passed by a specific interface on the system. This includes both bytes received (in) and sent (out) by the interface.",
+      "description": "Rate of packets passed per second by a specific interface. This includes both packets received (in) and sent (out) by the interface.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -287,7 +288,8 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "pps"
         },
         "overrides": []
       },
@@ -318,8 +320,8 @@
             "type": "prometheus",
             "uid": "$datasource"
           },
-          "editorMode": "builder",
-          "expr": "pfsense_interface_in_pass_pkts_count{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}",
+          "editorMode": "code",
+          "expr": "rate(pfsense_interface_in_pass_pkts_count{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}[$__rate_interval])",
           "legendFormat": "In: {{ descr }} ({{ host }})",
           "range": true,
           "refId": "A"
@@ -329,15 +331,15 @@
             "type": "prometheus",
             "uid": "$datasource"
           },
-          "editorMode": "builder",
-          "expr": "pfsense_interface_out_pass_pkts_count{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}",
+          "editorMode": "code",
+          "expr": "rate(pfsense_interface_out_pass_pkts_count{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}[$__rate_interval])",
           "hide": false,
           "legendFormat": "Out: {{ descr }} ({{ host }})",
           "range": true,
           "refId": "B"
         }
       ],
-      "title": "Interface Pass Packets",
+      "title": "Interface Pass Packets Rate",
       "type": "timeseries"
     },
     {
@@ -345,7 +347,7 @@
         "type": "prometheus",
         "uid": "$datasource"
       },
-      "description": "Displays the count of bytes seen by a specific interface on the system, regardless of whether the packet was passed or not. This includes both bytes received (in) and sent (out) by the interface.",
+      "description": "Rate of bytes per second seen by a specific interface, regardless of whether the packet was passed or not. This includes both bytes received (in) and sent (out) by the interface.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -398,7 +400,8 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "Bps"
         },
         "overrides": []
       },
@@ -429,8 +432,8 @@
             "type": "prometheus",
             "uid": "$datasource"
           },
-          "editorMode": "builder",
-          "expr": "pfsense_interface_in_bytes{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}",
+          "editorMode": "code",
+          "expr": "rate(pfsense_interface_in_bytes{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}[$__rate_interval])",
           "legendFormat": "In: {{ descr }} ({{ host }})",
           "range": true,
           "refId": "A"
@@ -440,15 +443,15 @@
             "type": "prometheus",
             "uid": "$datasource"
           },
-          "editorMode": "builder",
-          "expr": "pfsense_interface_out_bytes{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}",
+          "editorMode": "code",
+          "expr": "rate(pfsense_interface_out_bytes{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}[$__rate_interval])",
           "hide": false,
           "legendFormat": "Out: {{ descr }} ({{ host }})",
           "range": true,
           "refId": "B"
         }
       ],
-      "title": "Interface Bytes",
+      "title": "Interface Bytes Rate",
       "type": "timeseries"
     },
     {
@@ -456,7 +459,7 @@
         "type": "prometheus",
         "uid": "$datasource"
       },
-      "description": "Displays the number of packets seen by a specific interface on the system regardless of whether the packet was passed or not. This includes both bytes received (in) and sent (out) by the interface.",
+      "description": "Rate of packets per second seen by a specific interface regardless of whether the packet was passed or not. This includes both packets received (in) and sent (out) by the interface.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -509,7 +512,8 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "pps"
         },
         "overrides": []
       },
@@ -540,8 +544,8 @@
             "type": "prometheus",
             "uid": "$datasource"
           },
-          "editorMode": "builder",
-          "expr": "pfsense_interface_in_pkts_count{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}",
+          "editorMode": "code",
+          "expr": "rate(pfsense_interface_in_pkts_count{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}[$__rate_interval])",
           "legendFormat": "In: {{ descr }} ({{ host }})",
           "range": true,
           "refId": "A"
@@ -551,15 +555,15 @@
             "type": "prometheus",
             "uid": "$datasource"
           },
-          "editorMode": "builder",
-          "expr": "pfsense_interface_out_pkts_count{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}",
+          "editorMode": "code",
+          "expr": "rate(pfsense_interface_out_pkts_count{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}[$__rate_interval])",
           "hide": false,
           "legendFormat": "Out: {{ descr }} ({{ host }})",
           "range": true,
           "refId": "B"
         }
       ],
-      "title": "Interface Packets",
+      "title": "Interface Packets Rate",
       "type": "timeseries"
     },
     {
@@ -567,7 +571,7 @@
         "type": "prometheus",
         "uid": "$datasource"
       },
-      "description": "Displays the number of errors encountered by an interface. This includes both bytes received (in) and sent (out) by the interface.",
+      "description": "Rate of errors per second encountered by an interface. This includes both input (in) and output (out) errors.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -620,7 +624,8 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "short"
         },
         "overrides": []
       },
@@ -651,8 +656,8 @@
             "type": "prometheus",
             "uid": "$datasource"
           },
-          "editorMode": "builder",
-          "expr": "pfsense_interface_in_errs_count{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}",
+          "editorMode": "code",
+          "expr": "rate(pfsense_interface_in_errs_count{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}[$__rate_interval])",
           "legendFormat": "In: {{ descr }} ({{ host }})",
           "range": true,
           "refId": "A"
@@ -662,15 +667,15 @@
             "type": "prometheus",
             "uid": "$datasource"
           },
-          "editorMode": "builder",
-          "expr": "pfsense_interface_out_errs_count{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}",
+          "editorMode": "code",
+          "expr": "rate(pfsense_interface_out_errs_count{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}[$__rate_interval])",
           "hide": false,
           "legendFormat": "Out: {{ descr }} ({{ host }})",
           "range": true,
           "refId": "B"
         }
       ],
-      "title": "Interface Errors",
+      "title": "Interface Errors Rate",
       "type": "timeseries"
     },
     {
@@ -678,7 +683,7 @@
         "type": "prometheus",
         "uid": "$datasource"
       },
-      "description": "Displays the number of collisions encountered by an interface.",
+      "description": "Rate of collisions per second encountered by an interface.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -731,7 +736,8 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "short"
         },
         "overrides": []
       },
@@ -762,14 +768,14 @@
             "type": "prometheus",
             "uid": "$datasource"
           },
-          "editorMode": "builder",
-          "expr": "pfsense_interface_collisions_count{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}",
+          "editorMode": "code",
+          "expr": "rate(pfsense_interface_collisions_count{job=~\"$job\", instance=~\"$instance\", host=~\"$host\", descr=~\"$interface\"}[$__rate_interval])",
           "legendFormat": "{{ descr }} ({{ host }})",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Interface Collisions",
+      "title": "Interface Collisions Rate",
       "type": "timeseries"
     }
   ],
