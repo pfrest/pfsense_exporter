@@ -4,54 +4,57 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/pfrest/pfsense_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 )
 
 func TestNewInterfaceCollector(t *testing.T) {
 	collector := NewInterfaceCollector()
 
 	if collector == nil {
-		t.Error("Expected collector to be created")
+		t.Fatal("Expected collector to be created")
 	}
-
 	if collector.interfaceUp == nil {
-		t.Error("Expected interfaceUp metric to be initialized")
+		t.Error("Expected interfaceUp desc to be initialized")
 	}
 	if collector.interfaceInErrsCount == nil {
-		t.Error("Expected interfaceInErrsCount metric to be initialized")
+		t.Error("Expected interfaceInErrsCount desc to be initialized")
 	}
 	if collector.interfaceOutErrsCount == nil {
-		t.Error("Expected interfaceOutErrsCount metric to be initialized")
+		t.Error("Expected interfaceOutErrsCount desc to be initialized")
 	}
 	if collector.interfaceCollisionsCount == nil {
-		t.Error("Expected interfaceCollisionsCount metric to be initialized")
+		t.Error("Expected interfaceCollisionsCount desc to be initialized")
 	}
 	if collector.interfaceInBytesCount == nil {
-		t.Error("Expected interfaceInBytesCount metric to be initialized")
+		t.Error("Expected interfaceInBytesCount desc to be initialized")
 	}
-	if collector.interfaceInBytesPassCount == nil {
-		t.Error("Expected interfaceInBytesPassCount metric to be initialized")
+	if collector.interfaceInPassBytesCount == nil {
+		t.Error("Expected interfaceInPassBytesCount desc to be initialized")
 	}
 	if collector.interfaceOutBytesCount == nil {
-		t.Error("Expected interfaceOutBytesCount metric to be initialized")
+		t.Error("Expected interfaceOutBytesCount desc to be initialized")
 	}
-	if collector.interfaceOutBytesPassCount == nil {
-		t.Error("Expected interfaceOutBytesPassCount metric to be initialized")
+	if collector.interfaceOutPassBytesCount == nil {
+		t.Error("Expected interfaceOutPassBytesCount desc to be initialized")
 	}
 	if collector.interfaceInPktsCount == nil {
-		t.Error("Expected interfaceInPktsCount metric to be initialized")
+		t.Error("Expected interfaceInPktsCount desc to be initialized")
 	}
-	if collector.interfaceInPktsPassCount == nil {
-		t.Error("Expected interfaceInPktsPassCount metric to be initialized")
+	if collector.interfaceInPassPktsCount == nil {
+		t.Error("Expected interfaceInPassPktsCount desc to be initialized")
 	}
 	if collector.interfaceOutPktsCount == nil {
-		t.Error("Expected interfaceOutPktsCount metric to be initialized")
+		t.Error("Expected interfaceOutPktsCount desc to be initialized")
 	}
-	if collector.interfaceOutPktsPassCount == nil {
-		t.Error("Expected interfaceOutPktsPassCount metric to be initialized")
+	if collector.interfaceOutPassPktsCount == nil {
+		t.Error("Expected interfaceOutPassPktsCount desc to be initialized")
 	}
 }
 
@@ -72,20 +75,17 @@ func TestInterfaceCollectorDescribe(t *testing.T) {
 		close(ch)
 	}()
 
-	// Count descriptions
 	count := 0
 	for range ch {
 		count++
 	}
 
-	// Should have 11 descriptions (all metrics except interfaceUp which is not in Describe)
-	if count != 11 {
-		t.Errorf("Expected 11 metric descriptions, got %d", count)
+	if count != 12 {
+		t.Errorf("Expected 12 metric descriptions, got %d", count)
 	}
 }
 
 func TestInterfaceCollectorCollectWithTarget(t *testing.T) {
-	// Create test server for interface status
 	interfaceResponse := []InterfaceStats{
 		{
 			Name:         "wan",
@@ -94,7 +94,7 @@ func TestInterfaceCollectorCollectWithTarget(t *testing.T) {
 			Status:       "up",
 			InErrs:       10,
 			OutErrs:      5,
-			Collisions:   0,
+			Collisions:   2,
 			InBytes:      1024000,
 			InBytesPass:  1020000,
 			OutBytes:     512000,
@@ -123,148 +123,200 @@ func TestInterfaceCollectorCollectWithTarget(t *testing.T) {
 		},
 	}
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v2/status/interfaces" {
-			t.Errorf("Unexpected request path: %s", r.URL.Path)
-			return
-		}
-
-		data, _ := json.Marshal(interfaceResponse)
-		response := utils.Response{
-			Code:   200,
-			Status: "success",
-			Data:   data,
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
-	}))
+	server := newInterfaceTestServer(t, interfaceResponse)
 	defer server.Close()
 
-	// We can't easily test the full collection since it depends on utils.Request
-	// But we can test the collector structure and methods
+	target := interfaceTargetFromTestServer(t, server)
 	collector := NewInterfaceCollector()
+	metrics := collectInterfaceMetrics(t, collector, target)
 
-	if collector.Name() != "interface" {
-		t.Errorf("Expected name 'interface', got %s", collector.Name())
-	}
+	// WAN interface
+	assertInterfaceMetric(t, metrics, "pfsense_interface_up", 1, "wan")
+	assertInterfaceMetric(t, metrics, "pfsense_interface_in_errs_count", 10, "wan")
+	assertInterfaceMetric(t, metrics, "pfsense_interface_out_errs_count", 5, "wan")
+	assertInterfaceMetric(t, metrics, "pfsense_interface_collisions_count", 2, "wan")
+	assertInterfaceMetric(t, metrics, "pfsense_interface_in_bytes", 1024000, "wan")
+	assertInterfaceMetric(t, metrics, "pfsense_interface_in_pass_bytes", 1020000, "wan")
+	assertInterfaceMetric(t, metrics, "pfsense_interface_out_bytes", 512000, "wan")
+	assertInterfaceMetric(t, metrics, "pfsense_interface_out_pass_bytes", 510000, "wan")
+	assertInterfaceMetric(t, metrics, "pfsense_interface_in_pkts_count", 5000, "wan")
+	assertInterfaceMetric(t, metrics, "pfsense_interface_in_pass_pkts_count", 4950, "wan")
+	assertInterfaceMetric(t, metrics, "pfsense_interface_out_pkts_count", 2500, "wan")
+	assertInterfaceMetric(t, metrics, "pfsense_interface_out_pass_pkts_count", 2480, "wan")
 
-	_ = server.URL // Use server URL to avoid unused variable warning
+	// LAN interface
+	assertInterfaceMetric(t, metrics, "pfsense_interface_up", 0, "lan")
+	assertInterfaceMetric(t, metrics, "pfsense_interface_in_errs_count", 0, "lan")
+	assertInterfaceMetric(t, metrics, "pfsense_interface_collisions_count", 0, "lan")
+	assertInterfaceMetric(t, metrics, "pfsense_interface_in_bytes", 0, "lan")
 }
 
 func TestInterfaceCollectorCollectWithTargetError(t *testing.T) {
-	// Test with unreachable target to trigger error handling
 	target := &utils.Target{
-		Host:   "nonexistent.host",
-		Port:   443,
-		Scheme: "https",
+		Host:    "nonexistent.host",
+		Port:    443,
+		Scheme:  "https",
+		Timeout: 6,
 	}
 
 	collector := NewInterfaceCollector()
 
-	ch := make(chan prometheus.Metric, 10)
+	ch := make(chan prometheus.Metric, 50)
 	go func() {
 		collector.CollectWithTarget(ch, target)
 		close(ch)
 	}()
 
-	// Drain the channel - should be empty due to error
 	count := 0
 	for range ch {
 		count++
 	}
 
-	// No metrics should be produced on error
+	if count != 0 {
+		t.Errorf("Expected 0 metrics on error, got %d", count)
+	}
 }
 
 func TestInterfaceStatusToFloat64(t *testing.T) {
-	// Test up status
-	result := interfaceStatusToFloat64("up")
-	if result != 1.0 {
-		t.Errorf("Expected 1.0 for up status, got %f", result)
+	tests := []struct {
+		status   string
+		expected float64
+	}{
+		{"up", 1.0},
+		{"down", 0.0},
+		{"unknown", 0.0},
+		{"no carrier", 0.0},
 	}
 
-	// Test down status
-	result = interfaceStatusToFloat64("down")
-	if result != 0.0 {
-		t.Errorf("Expected 0.0 for down status, got %f", result)
-	}
-
-	// Test unknown status
-	result = interfaceStatusToFloat64("unknown")
-	if result != 0.0 {
-		t.Errorf("Expected 0.0 for unknown status, got %f", result)
-	}
-
-	// Test no carrier status
-	result = interfaceStatusToFloat64("no carrier")
-	if result != 0.0 {
-		t.Errorf("Expected 0.0 for 'no carrier' status, got %f", result)
+	for _, tt := range tests {
+		result := interfaceStatusToFloat64(tt.status)
+		if result != tt.expected {
+			t.Errorf("interfaceStatusToFloat64(%q) = %v, want %v", tt.status, result, tt.expected)
+		}
 	}
 }
 
-func TestInterfaceStatsStruct(t *testing.T) {
-	stats := InterfaceStats{
-		Name:         "test",
-		Descr:        "Test Interface",
-		Hwif:         "em0",
-		Status:       "up",
-		InErrs:       15,
-		OutErrs:      8,
-		Collisions:   2,
-		InBytes:      2048000,
-		InBytesPass:  2040000,
-		OutBytes:     1024000,
-		OutBytesPass: 1020000,
-		InPkts:       10000,
-		InPktsPass:   9900,
-		OutPkts:      5000,
-		OutPktsPass:  4960,
+func TestInterfaceMetricTypes(t *testing.T) {
+	interfaceResponse := []InterfaceStats{
+		{
+			Name: "wan", Descr: "WAN", Hwif: "em0", Status: "up",
+			InErrs: 1, OutErrs: 1, Collisions: 1,
+			InBytes: 1, InBytesPass: 1, OutBytes: 1, OutBytesPass: 1,
+			InPkts: 1, InPktsPass: 1, OutPkts: 1, OutPktsPass: 1,
+		},
 	}
 
-	if stats.Name != "test" {
-		t.Errorf("Expected Name 'test', got %s", stats.Name)
+	server := newInterfaceTestServer(t, interfaceResponse)
+	defer server.Close()
+
+	target := interfaceTargetFromTestServer(t, server)
+	collector := NewInterfaceCollector()
+	metrics := collectInterfaceMetrics(t, collector, target)
+
+	for _, m := range metrics {
+		d := &dto.Metric{}
+		m.Write(d)
+
+		name := m.Desc().String()
+		if strings.Contains(name, "interface_up") {
+			if d.Gauge == nil {
+				t.Errorf("%s should be a gauge", name)
+			}
+		} else {
+			if d.Counter == nil {
+				t.Errorf("%s should be a counter", name)
+			}
+		}
 	}
-	if stats.Descr != "Test Interface" {
-		t.Errorf("Expected Descr 'Test Interface', got %s", stats.Descr)
+}
+
+// --- Test helpers ---
+
+func newInterfaceTestServer(t *testing.T, interfaces []InterfaceStats) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v2/status/interfaces" {
+			t.Errorf("Unexpected request path: %s", r.URL.Path)
+			return
+		}
+		data, err := json.Marshal(interfaces)
+		if err != nil {
+			t.Fatalf("Failed to marshal test response: %v", err)
+		}
+		response := utils.Response{
+			Code:   200,
+			Status: "success",
+			Data:   data,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+}
+
+func interfaceTargetFromTestServer(t *testing.T, server *httptest.Server) *utils.Target {
+	t.Helper()
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("Failed to parse test server URL: %v", err)
 	}
-	if stats.Hwif != "em0" {
-		t.Errorf("Expected Hwif 'em0', got %s", stats.Hwif)
+	port, err := strconv.Atoi(u.Port())
+	if err != nil {
+		t.Fatalf("Failed to parse test server port: %v", err)
 	}
-	if stats.Status != "up" {
-		t.Errorf("Expected Status 'up', got %s", stats.Status)
+	return &utils.Target{
+		Host:    u.Hostname(),
+		Port:    port,
+		Scheme:  u.Scheme,
+		Timeout: 10,
 	}
-	if stats.InErrs != 15 {
-		t.Errorf("Expected InErrs 15, got %f", stats.InErrs)
+}
+
+func collectInterfaceMetrics(t *testing.T, collector *InterfaceCollector, target *utils.Target) []prometheus.Metric {
+	t.Helper()
+	ch := make(chan prometheus.Metric, 100)
+	go func() {
+		collector.CollectWithTarget(ch, target)
+		close(ch)
+	}()
+
+	var metrics []prometheus.Metric
+	for m := range ch {
+		metrics = append(metrics, m)
 	}
-	if stats.OutErrs != 8 {
-		t.Errorf("Expected OutErrs 8, got %f", stats.OutErrs)
+	return metrics
+}
+
+func assertInterfaceMetric(t *testing.T, metrics []prometheus.Metric, name string, expected float64, ifaceName string) {
+	t.Helper()
+	for _, m := range metrics {
+		d := &dto.Metric{}
+		m.Write(d)
+
+		if !strings.Contains(m.Desc().String(), name) {
+			continue
+		}
+
+		nameMatch := false
+		for _, lp := range d.Label {
+			if lp.GetName() == "name" && lp.GetValue() == ifaceName {
+				nameMatch = true
+			}
+		}
+		if !nameMatch {
+			continue
+		}
+
+		var got float64
+		if d.Gauge != nil {
+			got = d.Gauge.GetValue()
+		} else if d.Counter != nil {
+			got = d.Counter.GetValue()
+		}
+
+		if got != expected {
+			t.Errorf("%s{name=%q} = %v, want %v", name, ifaceName, got, expected)
+		}
+		return
 	}
-	if stats.Collisions != 2 {
-		t.Errorf("Expected Collisions 2, got %f", stats.Collisions)
-	}
-	if stats.InBytes != 2048000 {
-		t.Errorf("Expected InBytes 2048000, got %f", stats.InBytes)
-	}
-	if stats.InBytesPass != 2040000 {
-		t.Errorf("Expected InBytesPass 2040000, got %f", stats.InBytesPass)
-	}
-	if stats.OutBytes != 1024000 {
-		t.Errorf("Expected OutBytes 1024000, got %f", stats.OutBytes)
-	}
-	if stats.OutBytesPass != 1020000 {
-		t.Errorf("Expected OutBytesPass 1020000, got %f", stats.OutBytesPass)
-	}
-	if stats.InPkts != 10000 {
-		t.Errorf("Expected InPkts 10000, got %f", stats.InPkts)
-	}
-	if stats.InPktsPass != 9900 {
-		t.Errorf("Expected InPktsPass 9900, got %f", stats.InPktsPass)
-	}
-	if stats.OutPkts != 5000 {
-		t.Errorf("Expected OutPkts 5000, got %f", stats.OutPkts)
-	}
-	if stats.OutPktsPass != 4960 {
-		t.Errorf("Expected OutPktsPass 4960, got %f", stats.OutPktsPass)
-	}
+	t.Errorf("metric %s{name=%q} not found", name, ifaceName)
 }
